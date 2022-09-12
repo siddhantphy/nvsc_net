@@ -1,3 +1,6 @@
+import netsquid.qubits as qubits
+
+
 def logical_initialization():
     pass
 
