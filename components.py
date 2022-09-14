@@ -20,11 +20,19 @@ import netsquid.components.instructions as instr
 """
 
 def Create_Bell_Pair(node_A: Node, node_B: Node):
-    entanglement_gen = NVDoubleClickMagicDistributor(nodes=[node_A, node_B], length_A=0.001, length_B=0.001,
+    entanglement_gen = NVDoubleClickMagicDistributor(nodes=[node_A, node_B], length_A=0.00001, length_B=0.00001,
                                                  coin_prob_ph_ph=1., coin_prob_ph_dc=0., coin_prob_dc_dc=0.)
     
     entanglement_gen.add_delivery({node_A.ID: 0, node_B.ID: 0})
-    
+    rotate = Rotate_Bell_Pair(num_qubits=3)
+    # node_A.qmemory.execute_program(rotate)
+
+class Rotate_Bell_Pair(QuantumProgram):
+    default_num_qubits = 3
+
+    def program(self):
+        e1, c1, c3 = self.get_qubit_indices(3)
+        self.apply(instr.INSTR_X, e1)
 
 
 class Logical_Initialization(QuantumProgram):
@@ -38,8 +46,6 @@ class XXXX_Stabilizer(QuantumProgram):
 
     def program(self):
         e1, c1, c3 = self.get_qubit_indices(3)
-
-        self.apply(instr.INSTR_X, e1)
         self.apply(instr.INSTR_CXDIR, [e1, c1], angle=np.pi)
         self.apply(instr.INSTR_CXDIR, [e1, c3], angle=np.pi)
         self.apply(instr.INSTR_MEASURE, e1, output_key="m")
@@ -85,32 +91,33 @@ processor_B.put([e2,c2,c4])
 
 
 """ Logic of the tasks"""
-                                                
-Create_Bell_Pair(node_A=node_A, node_B=node_B)
-
-ns.sim_run()
-print(c1.qstate)
-# processor_A.apply(instr.INSTR_X, e1)
-# ns.qubits.operate(e1,ns.X)
-
-
-# quantum_prog_A = XXXX_Stabilizer(num_qubits=3)
-
-# quantum_prog_B = XXXX_Stabilizer(num_qubits=3)
-
 electron_1 = node_A.qmemory.peek([0])[0]
 electron_2 = node_B.qmemory.peek([0])[0]
 
+
+
+Create_Bell_Pair(node_A=node_A, node_B=node_B)
+
 print(reduced_dm([electron_1, electron_2]))
 
-# node_A.qmemory.execute_program(quantum_prog_A, qubit_mapping=[0, 1, 2])
-# ns.sim_run()
-# node_B.qmemory.execute_program(quantum_prog_B, qubit_mapping=[0, 1, 2])
-# ns.sim_run()
+ns.sim_run()
+# print(c1.qstate)
 
 
-# print(quantum_prog_A.output["m"])
-# print(quantum_prog_B.output["m"])
+quantum_prog_A = XXXX_Stabilizer(num_qubits=3)
+quantum_prog_B = XXXX_Stabilizer(num_qubits=3)
+
+
+
+node_A.qmemory.execute_program(quantum_prog_A, qubit_mapping=[0, 1, 2])
+ns.sim_run()
+node_B.qmemory.execute_program(quantum_prog_B, qubit_mapping=[0, 1, 2])
+ns.sim_run()
+
+
+print(quantum_prog_A.output["m"])
+print(quantum_prog_B.output["m"])
 
 
 # entanglement_gen = NVSingleClickMagicDistributor(nodes=[node_A, node_B], length_A=0.001, length_B=0.001, alpha_A=0.1, alpha_B=0.1)
+
