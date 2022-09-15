@@ -1,5 +1,7 @@
 from ast import Num
+from distutils.log import Log
 import logging
+from experiments.experiments import logical_initialization
 import numpy as np
 import netsquid as ns
 import netsquid.qubits.operators as ops
@@ -63,6 +65,8 @@ class Logical_Initialization(QuantumProgram):
 
     def program(self):
         e1, c1, c3 = self.get_qubit_indices(3)
+        self.apply(instr.INSTR_ROT_Y,c1,angle=np.pi)
+        yield self.run()
 
 class XXXX_Stabilizer(QuantumProgram):
     default_num_qubits = 3
@@ -119,7 +123,6 @@ def add_native_gates(NV_Center: NVQuantumProcessor):
     return
 
 
-
 """
     Main script
 """
@@ -148,6 +151,9 @@ processor_B.put([e2,c2,c4])
 add_native_gates(processor_A)
 add_native_gates(processor_B)
 
+physical_init = Logical_Initialization(num_qubits=3)
+node_A.qmemory.execute_program(physical_init, qubit_mapping=[0, 1, 2])
+ns.sim_run()
 
 create_Bell_Pair(node_A=node_A, node_B=node_B)
 # ns.sim_run()
