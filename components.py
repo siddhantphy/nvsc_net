@@ -9,23 +9,28 @@ from netsquid.protocols import Protocol
 from netsquid.components.qprogram import *
 from netsquid.qubits.qubitapi import reduced_dm
 import netsquid.components.instructions as instr
+from netsquid.components.qprocessor import QuantumProcessor, PhysicalInstruction
+
+# from netsquid.components.instructions import INSTR_X, INSTR_Y, INSTR_Z, INSTR_ROT_X, INSTR_ROT_Y, INSTR_ROT_Z, INSTR_H,\
+#     INSTR_MEASURE, INSTR_SWAP, INSTR_INIT, INSTR_CXDIR, INSTR_EMIT
+
 
 
 # ns.logger.setLevel(logging.DEBUG)
-
 
 
 """
     Classes for operations
 """
 
-def Create_Bell_Pair(node_A: Node, node_B: Node):
+def create_Bell_Pair(node_A: Node, node_B: Node):
     entanglement_gen = NVDoubleClickMagicDistributor(nodes=[node_A, node_B], length_A=0.00001, length_B=0.00001,
                                                  coin_prob_ph_ph=1., coin_prob_ph_dc=0., coin_prob_dc_dc=0.)
     
     entanglement_gen.add_delivery({node_A.ID: 0, node_B.ID: 0})
     rotate = Rotate_Bell_Pair(num_qubits=3)
-    # node_A.qmemory.execute_program(rotate)
+    node_A.qmemory.execute_program(rotate)
+    ns.sim_run()
 
 class Rotate_Bell_Pair(QuantumProgram):
     default_num_qubits = 3
@@ -33,6 +38,7 @@ class Rotate_Bell_Pair(QuantumProgram):
     def program(self):
         e1, c1, c3 = self.get_qubit_indices(3)
         self.apply(instr.INSTR_X, e1)
+        yield self.run()
 
 
 class Logical_Initialization(QuantumProgram):
@@ -65,6 +71,23 @@ class Tomography():
     pass
 
 
+"""
+    Adding native gates as instructions
+"""
+def add_native_gates(NV_Center: NVQuantumProcessor):
+    physical_instructions = []
+    physical_instructions.append(PhysicalInstruction(instr.INSTR_ROT_X, 
+                                                    parallel=False,
+                                                    topology=NV_Center.carbon_positions,
+                                                    q_noise_model=NV_Center.models["carbon_init_noise"],
+                                                    apply_q_noise_after=True,
+                                                    duration=NV_Center.properties["carbon_z_rot_duration"]))
+
+    for instruction in physical_instructions:
+            NV_Center.add_physical_instruction(instruction)
+    return
+
+
 
 """
     Main script
@@ -91,16 +114,16 @@ processor_B.put([e2,c2,c4])
 
 
 """ Logic of the tasks"""
+add_native_gates(processor_A)
+add_native_gates(processor_B)
+
+
+create_Bell_Pair(node_A=node_A, node_B=node_B)
+ns.sim_run()
+
 electron_1 = node_A.qmemory.peek([0])[0]
 electron_2 = node_B.qmemory.peek([0])[0]
-
-
-
-Create_Bell_Pair(node_A=node_A, node_B=node_B)
-
 print(reduced_dm([electron_1, electron_2]))
-
-ns.sim_run()
 # print(c1.qstate)
 
 
@@ -114,10 +137,8 @@ ns.sim_run()
 node_B.qmemory.execute_program(quantum_prog_B, qubit_mapping=[0, 1, 2])
 ns.sim_run()
 
-
 print(quantum_prog_A.output["m"])
 print(quantum_prog_B.output["m"])
 
 
 # entanglement_gen = NVSingleClickMagicDistributor(nodes=[node_A, node_B], length_A=0.001, length_B=0.001, alpha_A=0.1, alpha_B=0.1)
-
