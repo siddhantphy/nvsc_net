@@ -1,3 +1,4 @@
+from ast import Num
 import logging
 import numpy as np
 import netsquid as ns
@@ -10,6 +11,7 @@ from netsquid.components.qprogram import *
 from netsquid.qubits.qubitapi import reduced_dm
 import netsquid.components.instructions as instr
 from netsquid.components.qprocessor import QuantumProcessor, PhysicalInstruction
+from netsquid.qubits.ketstates import BellIndex
 
 # from netsquid.components.instructions import INSTR_X, INSTR_Y, INSTR_Z, INSTR_ROT_X, INSTR_ROT_Y, INSTR_ROT_Z, INSTR_H,\
 #     INSTR_MEASURE, INSTR_SWAP, INSTR_INIT, INSTR_CXDIR, INSTR_EMIT
@@ -27,10 +29,25 @@ def create_Bell_Pair(node_A: Node, node_B: Node):
     entanglement_gen = NVDoubleClickMagicDistributor(nodes=[node_A, node_B], length_A=0.00001, length_B=0.00001,
                                                  coin_prob_ph_ph=1., coin_prob_ph_dc=0., coin_prob_dc_dc=0.)
     
-    entanglement_gen.add_delivery({node_A.ID: 0, node_B.ID: 0})
-    rotate = Rotate_Bell_Pair(num_qubits=3)
-    node_A.qmemory.execute_program(rotate)
+    event = entanglement_gen.add_delivery({node_A.ID: 0, node_B.ID: 0})
+    label = entanglement_gen.get_label(event)
     ns.sim_run()
+    rotate = Rotate_Bell_Pair(num_qubits=3)
+    phase_gate = Phase_Correction(num_qubits=3)
+    program = rotate
+    if label[1] == BellIndex.PSI_MINUS:
+        print("Detected")
+        program += phase_gate
+    node_A.qmemory.execute_program(program, qubit_mapping=[0, 1, 2], check_qubit_mapping=True)
+    ns.sim_run()
+
+
+class Phase_Correction(QuantumProgram):
+    default_num_qubits = 3
+    def program(self):
+        e1, c1, c3 = self.get_qubit_indices(3)
+        self.apply(instr.INSTR_Z, e1)
+        yield self.run()
 
 class Rotate_Bell_Pair(QuantumProgram):
     default_num_qubits = 3
@@ -83,6 +100,20 @@ def add_native_gates(NV_Center: NVQuantumProcessor):
                                                     apply_q_noise_after=True,
                                                     duration=NV_Center.properties["carbon_z_rot_duration"]))
 
+    physical_instructions.append(PhysicalInstruction(instr.INSTR_ROT_Y, 
+                                                    parallel=False,
+                                                    topology=NV_Center.carbon_positions,
+                                                    q_noise_model=NV_Center.models["carbon_init_noise"],
+                                                    apply_q_noise_after=True,
+                                                    duration=NV_Center.properties["carbon_z_rot_duration"]))
+    
+    physical_instructions.append(PhysicalInstruction(instr.INSTR_ROT_Z, 
+                                                    parallel=False,
+                                                    topology=NV_Center.carbon_positions,
+                                                    q_noise_model=NV_Center.models["carbon_init_noise"],
+                                                    apply_q_noise_after=True,
+                                                    duration=NV_Center.properties["carbon_z_rot_duration"]))
+
     for instruction in physical_instructions:
             NV_Center.add_physical_instruction(instruction)
     return
@@ -119,7 +150,7 @@ add_native_gates(processor_B)
 
 
 create_Bell_Pair(node_A=node_A, node_B=node_B)
-ns.sim_run()
+# ns.sim_run()
 
 electron_1 = node_A.qmemory.peek([0])[0]
 electron_2 = node_B.qmemory.peek([0])[0]
