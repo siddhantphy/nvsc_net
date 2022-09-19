@@ -1,5 +1,7 @@
 import logging
+import os
 import numpy as np
+import matplotlib.pyplot as plt
 import netsquid as ns
 import netsquid.qubits.operators as ops
 from netsquid_nv.nv_center import NVQuantumProcessor
@@ -64,7 +66,7 @@ class Logical_Initialization(QuantumProgram):
 
         e1, c1, c3 = self.get_qubit_indices(3)
         self.apply(instr.INSTR_ROT_Y, c1, angle=theta)
-        self.apply(instr.INSTR_ROT_Y, c1, angle=theta)
+        self.apply(instr.INSTR_ROT_Y, c3, angle=theta)
         self.apply(instr.INSTR_ROT_Z, c3, angle=phi)
         yield self.run()
 
@@ -192,8 +194,6 @@ def logical_state_preparation(theta:float=0, phi:float=0):
     node_A.qmemory.execute_program(physical_init, qubit_mapping=[0, 1, 2], theta=theta, phi=phi)
     ns.sim_run()
 
-    create_Bell_Pair(node_A=node_A, node_B=node_B)
-
     electron_1 = node_A.qmemory.peek([0])[0]
     electron_2 = node_B.qmemory.peek([0])[0]
     carbon_1 = node_A.qmemory.peek([1])[0]
@@ -201,11 +201,6 @@ def logical_state_preparation(theta:float=0, phi:float=0):
     carbon_2 = node_B.qmemory.peek([1])[0]
     carbon_4 = node_B.qmemory.peek([2])[0]
 
-    # print(reduced_dm([electron_1, electron_2]))
-    # print(c1.qstate)
-
-    node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
-    ns.sim_run()
 
     node_A.qmemory.execute_program(zz_A, qubit_mapping=[0, 1, 2])
     ns.sim_run()
@@ -213,12 +208,20 @@ def logical_state_preparation(theta:float=0, phi:float=0):
     node_B.qmemory.execute_program(zz_B, qubit_mapping=[0, 1, 2])
     ns.sim_run()
 
+    node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+    ns.sim_run()
+
+    node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+    ns.sim_run()
+
+    create_Bell_Pair(node_A=node_A, node_B=node_B)
+
     node_A.qmemory.execute_program(xxxx_A, qubit_mapping=[0, 1, 2])
     ns.sim_run()
     node_B.qmemory.execute_program(xxxx_B, qubit_mapping=[0, 1, 2])
     ns.sim_run()
 
-    measurement_results = [zz_A.output["M"], zz_B.output["M"], xxxx_A.output["M"], xxxx_B.output["M"]]
+    measurement_results = [zz_A.output["M"][0], zz_B.output["M"][0], xxxx_A.output["M"][0], xxxx_B.output["M"][0]]
     data_density_matrix = reduced_dm([carbon_1, carbon_2, carbon_3, carbon_4])
 
     return data_density_matrix, measurement_results
@@ -232,12 +235,54 @@ def logical_state_preparation(theta:float=0, phi:float=0):
 """
     Main script
 """
+# iters = 100
+# sum=0
+# for iter in range(iters):
+#     rho, meas_results = logical_state_preparation(theta=np.pi, phi=0)
+#     theoretical_rho = create_theoretical_rho(theta=np.pi, phi=0)
 
-iters = 50
+#     overlap = np.trace(np.dot(theoretical_rho, rho))
+#     sum=sum+ np.real(overlap).round(15)   
+# print(sum/iters) 
 
-rho, meas_results = logical_state_preparation(theta=1, phi=1)
-theoretical_rho = create_theoretical_rho(theta=1, phi=1)
 
-overlap = np.trace(np.dot(theoretical_rho, rho))
-print(np.real(overlap).round(15))
-# print(rho)
+iters = 1000
+steps = 15
+post_selection = []
+for theta in np.arange(0,np.pi, np.pi/steps):
+    sum=0
+    for iter in range(iters):
+        rho, meas_results = logical_state_preparation(theta=theta, phi=0)
+        theoretical_rho = create_theoretical_rho(theta=theta, phi=0)
+        print(iter)
+        os.system('cls||clear')
+        if meas_results[0]==0 and meas_results[1]==0:
+            if meas_results[2]==meas_results[3]:
+                sum = sum+1
+                # print(sum)
+        # overlap = np.trace(np.dot(theoretical_rho, rho))
+        # sum=sum+ np.real(overlap).round(15)    
+    post_selection.append(sum/iters)
+print(post_selection)
+
+
+
+
+
+theta = np.arange(0,np.pi, np.pi/steps)
+theory = 0.5* ((np.cos(theta/2))**4+(np.sin(theta/2))**4)
+
+fig = plt.figure(figsize=(10,5))
+fig.set_facecolor("w")
+ax1 = fig.add_subplot()
+ax1.set_title('Post selection fraction for logical initialization')
+ax1.set_ylabel('P(θ)')
+ax1.set_xlabel('θ in radians')
+plt.grid()
+
+plt.plot(theta,post_selection,'o', label='post_selection')
+plt.plot(theta,theory,'r', label='post_selection')
+plt.savefig('Post selection.pdf')
+
+
+# [0.48333333333333334, 0.5333333333333333, 0.49666666666666665, 0.45666666666666667, 0.43333333333333335, 0.45666666666666667, 0.47333333333333333, 0.39, 0.37333333333333335, 0.31, 0.32666666666666666, 0.2966666666666667, 0.24333333333333335, 0.3, 0.22333333333333333, 0.25333333333333335, 0.28, 0.2633333333333333, 0.2833333333333333, 0.30666666666666664, 0.31, 0.37, 0.37666666666666665, 0.4066666666666667, 0.38666666666666666, 0.4, 0.45666666666666667, 0.4633333333333333, 0.47, 0.46]
