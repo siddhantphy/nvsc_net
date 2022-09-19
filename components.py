@@ -12,7 +12,6 @@ from netsquid.qubits.qubitapi import reduced_dm, assign_qstate
 import netsquid.components.instructions as instr
 from netsquid.components.qprocessor import QuantumProcessor, PhysicalInstruction
 from netsquid.qubits.ketstates import BellIndex
-
 from netsquid.components.instructions import INSTR_X, INSTR_Y, INSTR_Z, INSTR_ROT_X, INSTR_ROT_Y, INSTR_ROT_Z, INSTR_H,\
     INSTR_MEASURE, INSTR_SWAP, INSTR_INIT, INSTR_CXDIR, INSTR_EMIT
 
@@ -62,11 +61,12 @@ class Rotate_Bell_Pair(QuantumProgram):
 class Logical_Initialization(QuantumProgram):
     default_num_qubits = 3
 
-    def program(self, theta: float, phi: float):
+    def program(self, theta: float=0, phi: float=0):
 
         e1, c1, c3 = self.get_qubit_indices(3)
         self.apply(instr.INSTR_ROT_Y, c1, angle=theta)
-        self.apply(instr.INSTR_ROT_Z, c1, angle=phi)
+        self.apply(instr.INSTR_ROT_Y, c1, angle=theta)
+        self.apply(instr.INSTR_ROT_Z, c3, angle=phi)
         yield self.run()
 
 class XXXX_Stabilizer(QuantumProgram):
@@ -145,7 +145,6 @@ def add_native_gates(NV_Center: NVQuantumProcessor):
             NV_Center.add_physical_instruction(instruction)
     return
 
-
 """
     Main script
 """
@@ -186,7 +185,6 @@ zz_B = ZZ_Stabilizer(num_qubits=3)
 physical_init = Logical_Initialization(num_qubits=3)
 node_A.qmemory.execute_program(physical_init, qubit_mapping=[0, 1, 2], theta=3.4, phi=2.5)
 ns.sim_run()
-
 
 create_Bell_Pair(node_A=node_A, node_B=node_B)
 
