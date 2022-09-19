@@ -1,7 +1,5 @@
-from ast import Num
-from distutils.log import Log
 import logging
-from experiments.experiments import logical_initialization
+from traceback import print_tb
 import numpy as np
 import netsquid as ns
 import netsquid.qubits.operators as ops
@@ -10,13 +8,13 @@ from netsquid_nv.magic_distributor import NVDoubleClickMagicDistributor, NVSingl
 from netsquid.nodes import Node
 from netsquid.protocols import Protocol
 from netsquid.components.qprogram import *
-from netsquid.qubits.qubitapi import reduced_dm
+from netsquid.qubits.qubitapi import reduced_dm, assign_qstate
 import netsquid.components.instructions as instr
 from netsquid.components.qprocessor import QuantumProcessor, PhysicalInstruction
 from netsquid.qubits.ketstates import BellIndex
 
-# from netsquid.components.instructions import INSTR_X, INSTR_Y, INSTR_Z, INSTR_ROT_X, INSTR_ROT_Y, INSTR_ROT_Z, INSTR_H,\
-#     INSTR_MEASURE, INSTR_SWAP, INSTR_INIT, INSTR_CXDIR, INSTR_EMIT
+from netsquid.components.instructions import INSTR_X, INSTR_Y, INSTR_Z, INSTR_ROT_X, INSTR_ROT_Y, INSTR_ROT_Z, INSTR_H,\
+    INSTR_MEASURE, INSTR_SWAP, INSTR_INIT, INSTR_CXDIR, INSTR_EMIT
 
 
 
@@ -37,8 +35,9 @@ def create_Bell_Pair(node_A: Node, node_B: Node):
     rotate = Rotate_Bell_Pair(num_qubits=3)
     phase_gate = Phase_Correction(num_qubits=3)
     program = rotate
+
+    # Apply phase correction based on the detector click, to make \Phi+>
     if label[1] == BellIndex.PSI_MINUS:
-        print("Detected")
         program += phase_gate
     node_A.qmemory.execute_program(program, qubit_mapping=[0, 1, 2], check_qubit_mapping=True)
     ns.sim_run()
@@ -63,9 +62,11 @@ class Rotate_Bell_Pair(QuantumProgram):
 class Logical_Initialization(QuantumProgram):
     default_num_qubits = 3
 
-    def program(self):
+    def program(self, theta: float, phi: float):
+
         e1, c1, c3 = self.get_qubit_indices(3)
-        self.apply(instr.INSTR_ROT_Y,c1,angle=np.pi)
+        self.apply(instr.INSTR_ROT_Y, c1, angle=theta)
+        self.apply(instr.INSTR_ROT_Z, c1, angle=phi)
         yield self.run()
 
 class XXXX_Stabilizer(QuantumProgram):
@@ -73,9 +74,10 @@ class XXXX_Stabilizer(QuantumProgram):
 
     def program(self):
         e1, c1, c3 = self.get_qubit_indices(3)
-        self.apply(instr.INSTR_CXDIR, [e1, c1], angle=np.pi)
-        self.apply(instr.INSTR_CXDIR, [e1, c3], angle=np.pi)
-        self.apply(instr.INSTR_MEASURE, e1, output_key="m")
+        self.apply(instr.INSTR_CX, [e1, c1])
+        self.apply(instr.INSTR_CX, [e1, c3])
+        self.apply(instr.INSTR_H, e1)
+        self.apply(instr.INSTR_MEASURE, e1, output_key="M")
         yield self.run()
 
 class ZZ_Stabilizer(QuantumProgram):
@@ -83,9 +85,11 @@ class ZZ_Stabilizer(QuantumProgram):
 
     def program(self):
         e1, c1, c3 = self.get_qubit_indices(3)
-        self.apply(instr.INSTR_CXDIR, [e1, c1], angle=np.pi) # Perform Controlled Phase
-        self.apply(instr.INSTR_CXDIR, [e1, c3], angle=np.pi)
-        self.apply(instr.INSTR_MEASURE, e1, output_key="m")
+        self.apply(instr.INSTR_H, e1)
+        self.apply(instr.INSTR_CZ, [e1, c1]) # Perform Controlled Phase
+        self.apply(instr.INSTR_CZ, [e1, c3])
+        self.apply(instr.INSTR_H, e1)
+        self.apply(instr.INSTR_MEASURE, e1, output_key="M")
         yield self.run()
 
 class Tomography():
@@ -97,6 +101,8 @@ class Tomography():
 """
 def add_native_gates(NV_Center: NVQuantumProcessor):
     physical_instructions = []
+
+    # Add all arbitrary rotations on the carbon
     physical_instructions.append(PhysicalInstruction(instr.INSTR_ROT_X, 
                                                     parallel=False,
                                                     topology=NV_Center.carbon_positions,
@@ -117,6 +123,23 @@ def add_native_gates(NV_Center: NVQuantumProcessor):
                                                     q_noise_model=NV_Center.models["carbon_init_noise"],
                                                     apply_q_noise_after=True,
                                                     duration=NV_Center.properties["carbon_z_rot_duration"]))
+
+    physical_instructions.append(
+            PhysicalInstruction(instr.INSTR_CX,
+                                parallel=False,
+                                topology=[(0, 1), (0, 2)],
+                                q_noise_model=NV_Center.models["ec_noise"],
+                                apply_q_noise_after=True,
+                                duration=NV_Center.properties["ec_two_qubit_gate_duration"]))
+    
+    physical_instructions.append(
+            PhysicalInstruction(instr.INSTR_CZ,
+                                parallel=False,
+                                topology=[(0, 1), (0, 2)],
+                                q_noise_model=NV_Center.models["ec_noise"],
+                                apply_q_noise_after=True,
+                                duration=NV_Center.properties["ec_two_qubit_gate_duration"]))
+
 
     for instruction in physical_instructions:
             NV_Center.add_physical_instruction(instruction)
@@ -151,31 +174,52 @@ processor_B.put([e2,c2,c4])
 add_native_gates(processor_A)
 add_native_gates(processor_B)
 
+xxxx_A = XXXX_Stabilizer(num_qubits=3)
+xxxx_B = XXXX_Stabilizer(num_qubits=3)
+
+zz_A = ZZ_Stabilizer(num_qubits=3)
+zz_B = ZZ_Stabilizer(num_qubits=3)
+
+
+""" Run actual physical sequence """
+
 physical_init = Logical_Initialization(num_qubits=3)
-node_A.qmemory.execute_program(physical_init, qubit_mapping=[0, 1, 2])
+node_A.qmemory.execute_program(physical_init, qubit_mapping=[0, 1, 2], theta=3.4, phi=2.5)
 ns.sim_run()
 
+
 create_Bell_Pair(node_A=node_A, node_B=node_B)
-# ns.sim_run()
 
 electron_1 = node_A.qmemory.peek([0])[0]
 electron_2 = node_B.qmemory.peek([0])[0]
-print(reduced_dm([electron_1, electron_2]))
+carbon_1 = node_A.qmemory.peek([1])[0]
+carbon_3 = node_A.qmemory.peek([2])[0]
+carbon_2 = node_B.qmemory.peek([1])[0]
+carbon_4 = node_B.qmemory.peek([2])[0]
+
+# print(reduced_dm([electron_1, electron_2]))
 # print(c1.qstate)
 
-
-quantum_prog_A = XXXX_Stabilizer(num_qubits=3)
-quantum_prog_B = XXXX_Stabilizer(num_qubits=3)
-
-
-
-node_A.qmemory.execute_program(quantum_prog_A, qubit_mapping=[0, 1, 2])
-ns.sim_run()
-node_B.qmemory.execute_program(quantum_prog_B, qubit_mapping=[0, 1, 2])
+node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
 ns.sim_run()
 
-print(quantum_prog_A.output["m"])
-print(quantum_prog_B.output["m"])
+node_A.qmemory.execute_program(zz_A, qubit_mapping=[0, 1, 2])
+ns.sim_run()
 
+node_B.qmemory.execute_program(zz_B, qubit_mapping=[0, 1, 2])
+ns.sim_run()
+
+node_A.qmemory.execute_program(xxxx_A, qubit_mapping=[0, 1, 2])
+ns.sim_run()
+node_B.qmemory.execute_program(xxxx_B, qubit_mapping=[0, 1, 2])
+ns.sim_run()
+
+print(zz_A.output["M"])
+print(zz_B.output["M"])
+
+print(xxxx_A.output["M"])
+print(xxxx_B.output["M"])
+
+# print(reduced_dm([carbon_1, carbon_2, carbon_3, carbon_4]))
 
 # entanglement_gen = NVSingleClickMagicDistributor(nodes=[node_A, node_B], length_A=0.001, length_B=0.001, alpha_A=0.1, alpha_B=0.1)
