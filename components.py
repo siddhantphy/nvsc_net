@@ -1,5 +1,4 @@
 import logging
-from traceback import print_tb
 import numpy as np
 import netsquid as ns
 import netsquid.qubits.operators as ops
@@ -150,7 +149,7 @@ def create_theoretical_rho(theta:float=0, phi:float=0):
     ket_1 = np.array([[0], [1]])
     logical_0 = (np.kron(np.kron(ket_0, ket_0) , np.kron(ket_0, ket_0)) + np.kron(np.kron(ket_1, ket_1) , np.kron(ket_1, ket_1)))/np.sqrt(2)
     logical_1 = (np.kron(np.kron(ket_0, ket_1) , np.kron(ket_0, ket_1)) + np.kron(np.kron(ket_1, ket_0) , np.kron(ket_1, ket_0)))/np.sqrt(2)
-    psi_logical = (logical_0 * (np.cos(theta/2))**2 + logical_1 * (np.sin(theta/2))**2)/(np.sqrt((np.cos(theta/2))**4+(np.sin(theta/2))**4))
+    psi_logical = (logical_0 * (np.cos(theta/2))**2 + logical_1 * (np.exp(-1j*phi)*np.sin(theta/2))**2)/(np.sqrt((np.cos(theta/2))**4+(np.sin(theta/2))**4))
     rho_logical = np.outer(psi_logical, psi_logical)
     return rho_logical
 
@@ -190,7 +189,7 @@ def logical_state_preparation(theta:float=0, phi:float=0):
     """ Run actual physical sequence """
 
     physical_init = Logical_Initialization(num_qubits=3)
-    node_A.qmemory.execute_program(physical_init, qubit_mapping=[0, 1, 2], theta=0, phi=0)
+    node_A.qmemory.execute_program(physical_init, qubit_mapping=[0, 1, 2], theta=theta, phi=phi)
     ns.sim_run()
 
     create_Bell_Pair(node_A=node_A, node_B=node_B)
@@ -234,8 +233,11 @@ def logical_state_preparation(theta:float=0, phi:float=0):
     Main script
 """
 
+iters = 50
+
 rho, meas_results = logical_state_preparation(theta=1, phi=1)
 theoretical_rho = create_theoretical_rho(theta=1, phi=1)
 
-print(np.trace(np.dot(theoretical_rho, rho)))
+overlap = np.trace(np.dot(theoretical_rho, rho))
+print(np.real(overlap).round(15))
 # print(rho)
