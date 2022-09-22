@@ -15,7 +15,7 @@ from netsquid.qubits.qubitapi import reduced_dm, assign_qstate
 import netsquid.components.instructions as instr
 from netsquid.components.qprocessor import QuantumProcessor, PhysicalInstruction
 from netsquid.qubits.ketstates import BellIndex
-from netsquid.components.instructions import INSTR_X, INSTR_Y, INSTR_Z, INSTR_ROT_X, INSTR_ROT_Y, INSTR_ROT_Z, INSTR_H,\
+from netsquid.components.instructions import INSTR_X, INSTR_Y, INSTR_Z, INSTR_ROT_X, INSTR_ROT_Y, INSTR_ROT_Z, INSTR_H, INSTR_S,\
     INSTR_MEASURE, INSTR_SWAP, INSTR_INIT, INSTR_CXDIR, INSTR_EMIT
 
 
@@ -111,6 +111,14 @@ class XL_Measurement(QuantumProgram):
         self.apply(instr.INSTR_MEASURE, e1, output_key="M")
         yield self.run()
 
+class YL_Measurement(QuantumProgram):
+    default_num_qubits = 3
+
+    def program(self):
+        e1, c1, c3 = self.get_qubit_indices(3)
+        self.apply(instr.INSTR_MEASURE, e1, output_key="M")
+        yield self.run()
+
 
 
 """
@@ -140,6 +148,12 @@ def add_native_gates(NV_Center: NVQuantumProcessor):
                                                     q_noise_model=NV_Center.models["carbon_init_noise"],
                                                     apply_q_noise_after=True,
                                                     duration=NV_Center.properties["carbon_z_rot_duration"]))
+    
+    physical_instructions.append(PhysicalInstruction(instr.INSTR_S, 
+                                                    parallel=False,
+                                                    topology=[NV_Center.electron_position],
+                                                    q_noise_model=NV_Center.models["electron_single_qubit_noise"],
+                                                    duration=NV_Center.properties["electron_single_qubit_duration"]))
 
     physical_instructions.append(
             PhysicalInstruction(instr.INSTR_CX,
@@ -304,7 +318,47 @@ def logical_Z_measurement(node_A: Node, node_B: Node):
 
 
 def logical_Y_measurement(node_A: Node, node_B: Node):
-    pass
+    node_A_YL = YL_Measurement(num_qubits=3)
+    node_B_YL = YL_Measurement(num_qubits=3)
+
+    yl_data_results = []
+
+    node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+    ns.sim_run()
+    reverse_move_using_CXDirections(node_A_YL, 0, 1)
+    node_A.qmemory.execute_instruction(instr.INSTR_S, qubit_mapping=[0])
+    ns.sim_run()
+    node_A.qmemory.execute_program(node_A_YL, qubit_mapping=[0, 1, 2])
+    ns.sim_run()
+    yl_data_results.append(node_A_YL.output["M"][0])
+
+    node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+    ns.sim_run()
+    reverse_move_using_CXDirections(node_B_YL, 0, 1)
+    node_B.qmemory.execute_instruction(instr.INSTR_H, qubit_mapping=[0])
+    ns.sim_run()
+    node_B.qmemory.execute_program(node_B_YL, qubit_mapping=[0, 1, 2])
+    ns.sim_run()
+    yl_data_results.append(node_B_YL.output["M"][0])
+
+    node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+    ns.sim_run()
+    reverse_move_using_CXDirections(node_A_YL, 0, 2)
+    ns.sim_run()
+    node_A.qmemory.execute_program(node_A_YL, qubit_mapping=[0, 1, 2])
+    ns.sim_run()
+    yl_data_results.append(node_A_YL.output["M"][0])
+
+    node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+    ns.sim_run()
+    reverse_move_using_CXDirections(node_B_YL, 0, 2)
+    node_B.qmemory.execute_instruction(instr.INSTR_H, qubit_mapping=[0])
+    ns.sim_run()
+    node_B.qmemory.execute_program(node_B_YL, qubit_mapping=[0, 1, 2])
+    ns.sim_run()
+    yl_data_results.append(node_B_YL.output["M"][0])
+
+    return yl_data_results
 
 
 def logical_X_measurement(node_A: Node, node_B: Node):
@@ -398,13 +452,13 @@ def logical_state_fidelity_theta(iters:int=1, steps:int=10, logical_measure="Z_L
                 if meas_results[2]==meas_results[3]:
                     sum = sum+1
                     if logical_measure == "Z_L":
-                        new_overlap =  np.trace(np.matmul(z_l,rho)).real
+                        new_overlap =  round(np.trace(np.matmul(z_l,rho)).real, 15)
                         overlap +=new_overlap
                     elif logical_measure == "X_L":
-                        new_overlap =  np.trace(np.matmul(x_l,rho)).real
+                        new_overlap =  round(np.trace(np.matmul(x_l,rho)).real, 15)
                         overlap +=new_overlap
                     elif logical_measure == "Y_L":
-                        new_overlap =  np.trace(np.matmul(y_l,rho)).real
+                        new_overlap =  round(np.trace(np.matmul(y_l,rho)).real, 15)
                         overlap +=new_overlap
                     print(new_overlap)
         overlap = overlap/sum
