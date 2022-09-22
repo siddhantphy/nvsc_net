@@ -366,10 +366,13 @@ def logical_state_fidelity_theta(iters:int=1, steps:int=10):
             if meas_results[0]==0 and meas_results[1]==0:
                 if meas_results[2]==meas_results[3]:
                     sum = sum+1
-                    overlap += np.trace(z_l,rho)
+                    new_overlap =  np.trace(np.matmul(z_l,rho)).real
+                    overlap +=new_overlap
+                    print(new_overlap)
         overlap = overlap/sum
         z_L_avg.append(overlap)
 
+    print(z_L_avg)
     theta = np.arange(0,np.pi, np.pi/steps)
     theory = np.cos(theta)
 
@@ -397,13 +400,12 @@ def logical_state_fidelity_theta(iters:int=1, steps:int=10):
 """
 
 
-iters = 1500
-steps = 20
+iters = 25
+steps = 10
 
-logical_state_fidelity_theta()
+logical_state_fidelity_theta(iters=iters, steps=steps)
 
 
 
 """ Trash data from before"""
 # [0.48333333333333334, 0.5333333333333333, 0.49666666666666665, 0.45666666666666667, 0.43333333333333335, 0.45666666666666667, 0.47333333333333333, 0.39, 0.37333333333333335, 0.31, 0.32666666666666666, 0.2966666666666667, 0.24333333333333335, 0.3, 0.22333333333333333, 0.25333333333333335, 0.28, 0.2633333333333333, 0.2833333333333333, 0.30666666666666664, 0.31, 0.37, 0.37666666666666665, 0.4066666666666667, 0.38666666666666666, 0.4, 0.45666666666666667, 0.4633333333333333, 0.47, 0.46]
-
