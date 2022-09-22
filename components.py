@@ -1,11 +1,12 @@
 import logging
 import os
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 import netsquid as ns
 import netsquid.qubits.operators as ops
 from netsquid_nv.nv_center import NVQuantumProcessor
-from netsquid_nv.move_circuits import reverse_move_using_CXDirections
+from netsquid_nv.move_circuits import reverse_move_using_CXDirections # Note that this results into a Hadamrd being applied on the electron, so there is a change of basis
 from netsquid_nv.magic_distributor import NVDoubleClickMagicDistributor, NVSingleClickMagicDistributor
 from netsquid.nodes import Node
 from netsquid.protocols import Protocol
@@ -18,7 +19,7 @@ from netsquid.components.instructions import INSTR_X, INSTR_Y, INSTR_Z, INSTR_RO
     INSTR_MEASURE, INSTR_SWAP, INSTR_INIT, INSTR_CXDIR, INSTR_EMIT
 
 
-
+timestr = time.strftime("%Y%m%d-%H%M%S")
 # ns.logger.setLevel(logging.DEBUG)
 
 
@@ -107,8 +108,7 @@ class XL_Measurement(QuantumProgram):
 
     def program(self):
         e1, c1, c3 = self.get_qubit_indices(3)
-        self.apply(instr.INSTR_MEASURE_X, c1, output_key="M1")
-        self.apply(instr.INSTR_MEASURE_X, c3, output_key="M3")
+        self.apply(instr.INSTR_MEASURE, e1, output_key="M")
         yield self.run()
 
 
@@ -302,21 +302,51 @@ def logical_Z_measurement(node_A: Node, node_B: Node):
 
     return zl_data_results
 
+
 def logical_Y_measurement(node_A: Node, node_B: Node):
     pass
+
 
 def logical_X_measurement(node_A: Node, node_B: Node):
     node_A_XL = XL_Measurement(num_qubits=3)
     node_B_XL = XL_Measurement(num_qubits=3)
 
+    xl_data_results = []
+
+    node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+    ns.sim_run()
+    reverse_move_using_CXDirections(node_A_XL, 0, 1)
+    ns.sim_run()
     node_A.qmemory.execute_program(node_A_XL, qubit_mapping=[0, 1, 2])
+    ns.sim_run()
+    xl_data_results.append(node_A_XL.output["M"][0])
+
+    node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+    ns.sim_run()
+    reverse_move_using_CXDirections(node_B_XL, 0, 1)
     ns.sim_run()
     node_B.qmemory.execute_program(node_B_XL, qubit_mapping=[0, 1, 2])
     ns.sim_run()
+    xl_data_results.append(node_B_XL.output["M"][0])
 
-    xl_data_results = [node_A_XL.output["M1"][0], node_B_XL.output["M1"][0], node_A_XL.output["M3"][0], node_B_XL.output["M3"][0]]
+    node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+    ns.sim_run()
+    reverse_move_using_CXDirections(node_A_XL, 0, 2)
+    ns.sim_run()
+    node_A.qmemory.execute_program(node_A_XL, qubit_mapping=[0, 1, 2])
+    ns.sim_run()
+    xl_data_results.append(node_A_XL.output["M"][0])
+
+    node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+    ns.sim_run()
+    reverse_move_using_CXDirections(node_B_XL, 0, 2)
+    ns.sim_run()
+    node_B.qmemory.execute_program(node_B_XL, qubit_mapping=[0, 1, 2])
+    ns.sim_run()
+    xl_data_results.append(node_B_XL.output["M"][0])
 
     return xl_data_results
+
 
 """ 
     Plotting and results
@@ -353,40 +383,54 @@ def plot_logical_post_theta(iters:int=1, steps:int=10):
 
     return
 
-def logical_state_fidelity_theta(iters:int=1, steps:int=10):
-    z_L_avg = []
+
+def logical_state_fidelity_theta(iters:int=1, steps:int=10, logical_measure="Z_L"):
+    o_L_avg = []
     for theta in np.arange(0,np.pi, np.pi/steps):
         sum=0
         overlap = 0
         for iter in range(iters):
-            rho, meas_results, data_measure = logical_state_preparation(theta=theta, phi=0)
+            rho, meas_results, data_measure = logical_state_preparation(theta=theta, phi=0, logical_measure=logical_measure)
             theoretical_rho, x_l, y_l, z_l = create_theoretical_rho(theta=theta, phi=0)
             print(iter)
             os.system('cls||clear')
             if meas_results[0]==0 and meas_results[1]==0:
                 if meas_results[2]==meas_results[3]:
                     sum = sum+1
-                    new_overlap =  np.trace(np.matmul(z_l,rho)).real
-                    overlap +=new_overlap
+                    if logical_measure == "Z_L":
+                        new_overlap =  np.trace(np.matmul(z_l,rho)).real
+                        overlap +=new_overlap
+                    elif logical_measure == "X_L":
+                        new_overlap =  np.trace(np.matmul(x_l,rho)).real
+                        overlap +=new_overlap
+                    elif logical_measure == "Y_L":
+                        new_overlap =  np.trace(np.matmul(y_l,rho)).real
+                        overlap +=new_overlap
                     print(new_overlap)
         overlap = overlap/sum
-        z_L_avg.append(overlap)
+        o_L_avg.append(overlap)
 
-    print(z_L_avg)
+    print(o_L_avg)
     theta = np.arange(0,np.pi, np.pi/steps)
-    theory = np.cos(theta)
+
+    if logical_measure == "Z_L":
+        theory = ((np.cos(theta/2))**4 - (np.sin(theta/2))**4)/((np.cos(theta/2))**4 + (np.sin(theta/2))**4)
+    elif logical_measure == "X_L":
+        theory = (2 * (np.cos(theta/2))**2 * (np.sin(theta/2))**2)/((np.cos(theta/2))**4 + (np.sin(theta/2))**4)
+    elif logical_measure == "Y_L":
+        theory = 0 * theta
 
     fig = plt.figure(figsize=(10,5))
     fig.set_facecolor("w")
     ax1 = fig.add_subplot()
-    ax1.set_title('Logical Z initialization')
-    ax1.set_ylabel('<Z_L>')
+    ax1.set_title(f'Logical {logical_measure} initialization')
+    ax1.set_ylabel(f'<{logical_measure}>')
     ax1.set_xlabel('θ in radians')
     plt.grid()
 
-    plt.plot(theta,z_L_avg,'o', label='ZL assignment')
-    plt.plot(theta,theory,'r', label='ZL assignment')
-    plt.savefig('ZL assignment.pdf')
+    plt.plot(theta,o_L_avg,'o', label=f'{logical_measure} assignment data')
+    plt.plot(theta,theory,'r', label=f'{logical_measure} assignment theory')
+    plt.savefig(f'{logical_measure}_assignment_{timestr}.pdf')
 
 
 """
@@ -400,10 +444,10 @@ def logical_state_fidelity_theta(iters:int=1, steps:int=10):
 """
 
 
-iters = 250
-steps = 30
+iters = 25
+steps = 20
 
-logical_state_fidelity_theta(iters=iters, steps=steps)
+logical_state_fidelity_theta(iters=iters, steps=steps, logical_measure="Y_L")
 
 
 
