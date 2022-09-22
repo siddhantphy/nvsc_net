@@ -93,8 +93,24 @@ class ZZ_Stabilizer(QuantumProgram):
         self.apply(instr.INSTR_MEASURE, e1, output_key="M")
         yield self.run()
 
-class Tomography():
-    pass
+class ZL_Measurement(QuantumProgram):
+    default_num_qubits = 3
+
+    def program(self):
+        e1, c1, c3 = self.get_qubit_indices(3)
+        self.apply(instr.INSTR_MEASURE, c1, output_key="M1")
+        self.apply(instr.INSTR_MEASURE, c3, output_key="M3")
+        yield self.run()
+
+class XL_Measurement(QuantumProgram):
+    default_num_qubits = 3
+
+    def program(self):
+        e1, c1, c3 = self.get_qubit_indices(3)
+        self.apply(instr.INSTR_MEASURE_X, c1, output_key="M1")
+        self.apply(instr.INSTR_MEASURE_X, c3, output_key="M3")
+        yield self.run()
+
 
 
 """
@@ -155,9 +171,10 @@ def create_theoretical_rho(theta:float=0, phi:float=0):
     rho_logical = np.outer(psi_logical, psi_logical)
     return rho_logical
 
+
 """ Main logical circuit and experiment! """
 
-def logical_state_preparation(theta:float=0, phi:float=0):
+def logical_state_preparation(theta:float=0, phi:float=0, logical_measure = "Z_L"):
     """ Components creation"""
     node_A = Node("Node: A")
     processor_A = NVQuantumProcessor(num_positions=3, noiseless=True)
@@ -224,7 +241,93 @@ def logical_state_preparation(theta:float=0, phi:float=0):
     measurement_results = [zz_A.output["M"][0], zz_B.output["M"][0], xxxx_A.output["M"][0], xxxx_B.output["M"][0]]
     data_density_matrix = reduced_dm([carbon_1, carbon_2, carbon_3, carbon_4])
 
-    return data_density_matrix, measurement_results
+    data_measure = "Nothing measured!"
+
+    if logical_measure == "Z_L":
+        data_measure = logical_Z_measurement(node_A=node_A, node_B=node_B)
+    elif logical_measure == "X_L":
+        data_measure = logical_X_measurement(node_A=node_A, node_B=node_B)
+    elif logical_measure == "Y_L":
+        data_measure = logical_Y_measurement(node_A=node_A, node_B=node_B)
+    else:
+        raise RuntimeError("Invalid logical measurement basis chosen!")
+
+    return data_density_matrix, measurement_results, data_measure
+
+def logical_Z_measurement(node_A: Node, node_B: Node):
+    node_A_ZL = ZL_Measurement(num_qubits=3)
+    node_B_ZL = ZL_Measurement(num_qubits=3)
+
+    node_A.qmemory.execute_program(node_A_ZL, qubit_mapping=[0, 1, 2])
+    ns.sim_run()
+    node_B.qmemory.execute_program(node_A_ZL, qubit_mapping=[0, 1, 2])
+    ns.sim_run()
+
+    zl_data_results = [node_A_ZL.output["M1"][0], node_B_ZL.output["M1"][0], node_A_ZL.output["M3"][0], node_B_ZL.output["M3"][0]]
+
+    return zl_data_results
+
+def logical_Y_measurement(node_A: Node, node_B: Node):
+    pass
+
+def logical_X_measurement(node_A: Node, node_B: Node):
+    node_A_XL = XL_Measurement(num_qubits=3)
+    node_B_XL = XL_Measurement(num_qubits=3)
+
+    node_A.qmemory.execute_program(node_A_XL, qubit_mapping=[0, 1, 2])
+    ns.sim_run()
+    node_B.qmemory.execute_program(node_A_XL, qubit_mapping=[0, 1, 2])
+    ns.sim_run()
+
+    xl_data_results = [node_A_XL.output["M1"][0], node_B_XL.output["M1"][0], node_A_XL.output["M3"][0], node_B_XL.output["M3"][0]]
+
+    return xl_data_results
+
+""" 
+    Plotting and results
+"""
+def plot_logical_post_theta(iters:int=1, steps:int=10):
+    post_selection = []
+    for theta in np.arange(0,np.pi, np.pi/steps):
+        sum=0
+        for iter in range(iters):
+            rho, meas_results = logical_state_preparation(theta=theta, phi=0)
+            # theoretical_rho = create_theoretical_rho(theta=theta, phi=0)
+            print(iter)
+            os.system('cls||clear')
+            if meas_results[0]==0 and meas_results[1]==0:
+                if meas_results[2]==meas_results[3]:
+                    sum = sum+1 
+        post_selection.append(sum/iters)
+    print(post_selection)
+
+    theta = np.arange(0,np.pi, np.pi/steps)
+    theory = 0.5* ((np.cos(theta/2))**4+(np.sin(theta/2))**4)
+
+    fig = plt.figure(figsize=(10,5))
+    fig.set_facecolor("w")
+    ax1 = fig.add_subplot()
+    ax1.set_title('Post selection fraction for logical initialization')
+    ax1.set_ylabel('P(θ)')
+    ax1.set_xlabel('θ in radians')
+    plt.grid()
+
+    plt.plot(theta,post_selection,'o', label='post_selection')
+    plt.plot(theta,theory,'r', label='post_selection')
+    plt.savefig('Post selection.pdf')
+
+    return
+
+def logical_state_fidelity_theta(iters:int=1, steps:int=10):
+    for theta in np.arange(0,np.pi, np.pi/steps):
+        sum=0
+        for iter in range(iters):
+            rho, meas_results, data_measure = logical_state_preparation(theta=theta, phi=0)
+            print(iter)
+            os.system('cls||clear')
+            if meas_results[0]==0 and meas_results[1]==0:
+                if meas_results[2]==meas_results[3]:
+                    sum = sum+1 
 
 """
 ############################################################################
@@ -235,54 +338,14 @@ def logical_state_preparation(theta:float=0, phi:float=0):
 """
     Main script
 """
-# iters = 100
-# sum=0
-# for iter in range(iters):
-#     rho, meas_results = logical_state_preparation(theta=np.pi, phi=0)
-#     theoretical_rho = create_theoretical_rho(theta=np.pi, phi=0)
-
-#     overlap = np.trace(np.dot(theoretical_rho, rho))
-#     sum=sum+ np.real(overlap).round(15)   
-# print(sum/iters) 
 
 
-iters = 1000
-steps = 15
-post_selection = []
-for theta in np.arange(0,np.pi, np.pi/steps):
-    sum=0
-    for iter in range(iters):
-        rho, meas_results = logical_state_preparation(theta=theta, phi=0)
-        theoretical_rho = create_theoretical_rho(theta=theta, phi=0)
-        print(iter)
-        os.system('cls||clear')
-        if meas_results[0]==0 and meas_results[1]==0:
-            if meas_results[2]==meas_results[3]:
-                sum = sum+1
-                # print(sum)
-        # overlap = np.trace(np.dot(theoretical_rho, rho))
-        # sum=sum+ np.real(overlap).round(15)    
-    post_selection.append(sum/iters)
-print(post_selection)
+iters = 1500
+steps = 20
 
 
 
 
-
-theta = np.arange(0,np.pi, np.pi/steps)
-theory = 0.5* ((np.cos(theta/2))**4+(np.sin(theta/2))**4)
-
-fig = plt.figure(figsize=(10,5))
-fig.set_facecolor("w")
-ax1 = fig.add_subplot()
-ax1.set_title('Post selection fraction for logical initialization')
-ax1.set_ylabel('P(θ)')
-ax1.set_xlabel('θ in radians')
-plt.grid()
-
-plt.plot(theta,post_selection,'o', label='post_selection')
-plt.plot(theta,theory,'r', label='post_selection')
-plt.savefig('Post selection.pdf')
-
-
+""" Trash data from before"""
 # [0.48333333333333334, 0.5333333333333333, 0.49666666666666665, 0.45666666666666667, 0.43333333333333335, 0.45666666666666667, 0.47333333333333333, 0.39, 0.37333333333333335, 0.31, 0.32666666666666666, 0.2966666666666667, 0.24333333333333335, 0.3, 0.22333333333333333, 0.25333333333333335, 0.28, 0.2633333333333333, 0.2833333333333333, 0.30666666666666664, 0.31, 0.37, 0.37666666666666665, 0.4066666666666667, 0.38666666666666666, 0.4, 0.45666666666666667, 0.4633333333333333, 0.47, 0.46]
+
