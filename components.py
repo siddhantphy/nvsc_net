@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import netsquid as ns
 import netsquid.qubits.operators as ops
 from netsquid_nv.nv_center import NVQuantumProcessor
+from netsquid_nv.move_circuits import reverse_move_using_CXDirections
 from netsquid_nv.magic_distributor import NVDoubleClickMagicDistributor, NVSingleClickMagicDistributor
 from netsquid.nodes import Node
 from netsquid.protocols import Protocol
@@ -98,8 +99,7 @@ class ZL_Measurement(QuantumProgram):
 
     def program(self):
         e1, c1, c3 = self.get_qubit_indices(3)
-        self.apply(instr.INSTR_MEASURE, c1, output_key="M1")
-        self.apply(instr.INSTR_MEASURE, c3, output_key="M3")
+        self.apply(instr.INSTR_MEASURE, e1, output_key="M")
         yield self.run()
 
 class XL_Measurement(QuantumProgram):
@@ -156,6 +156,7 @@ def add_native_gates(NV_Center: NVQuantumProcessor):
                                 q_noise_model=NV_Center.models["ec_noise"],
                                 apply_q_noise_after=True,
                                 duration=NV_Center.properties["ec_two_qubit_gate_duration"]))
+    
 
 
     for instruction in physical_instructions:
@@ -169,7 +170,11 @@ def create_theoretical_rho(theta:float=0, phi:float=0):
     logical_1 = (np.kron(np.kron(ket_0, ket_1) , np.kron(ket_0, ket_1)) + np.kron(np.kron(ket_1, ket_0) , np.kron(ket_1, ket_0)))/np.sqrt(2)
     psi_logical = (logical_0 * (np.cos(theta/2))**2 + logical_1 * (np.exp(-1j*phi)*np.sin(theta/2))**2)/(np.sqrt((np.cos(theta/2))**4+(np.sin(theta/2))**4))
     rho_logical = np.outer(psi_logical, psi_logical)
-    return rho_logical
+
+    z_L = np.outer(logical_0, logical_0) + np.outer(logical_1, logical_1)
+    x_l = np.outer(logical_0, logical_1) + np.outer(logical_1, logical_0)
+    y_L = -1j * np.outer(logical_0, logical_1) + 1j* np.outer(logical_1, logical_0)
+    return rho_logical, x_l, y_L, z_L
 
 
 """ Main logical circuit and experiment! """
@@ -237,7 +242,6 @@ def logical_state_preparation(theta:float=0, phi:float=0, logical_measure = "Z_L
     ns.sim_run()
     node_B.qmemory.execute_program(xxxx_B, qubit_mapping=[0, 1, 2])
     ns.sim_run()
-
     measurement_results = [zz_A.output["M"][0], zz_B.output["M"][0], xxxx_A.output["M"][0], xxxx_B.output["M"][0]]
     data_density_matrix = reduced_dm([carbon_1, carbon_2, carbon_3, carbon_4])
 
@@ -258,12 +262,43 @@ def logical_Z_measurement(node_A: Node, node_B: Node):
     node_A_ZL = ZL_Measurement(num_qubits=3)
     node_B_ZL = ZL_Measurement(num_qubits=3)
 
+    zl_data_results = []
+
+    node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+    ns.sim_run()
+    reverse_move_using_CXDirections(node_A_ZL, 0, 1)
+    node_A.qmemory.execute_instruction(instr.INSTR_H, qubit_mapping=[0])
+    ns.sim_run()
     node_A.qmemory.execute_program(node_A_ZL, qubit_mapping=[0, 1, 2])
     ns.sim_run()
-    node_B.qmemory.execute_program(node_A_ZL, qubit_mapping=[0, 1, 2])
-    ns.sim_run()
+    zl_data_results.append(node_A_ZL.output["M"][0])
 
-    zl_data_results = [node_A_ZL.output["M1"][0], node_B_ZL.output["M1"][0], node_A_ZL.output["M3"][0], node_B_ZL.output["M3"][0]]
+    node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+    ns.sim_run()
+    reverse_move_using_CXDirections(node_B_ZL, 0, 1)
+    node_B.qmemory.execute_instruction(instr.INSTR_H, qubit_mapping=[0])
+    ns.sim_run()
+    node_B.qmemory.execute_program(node_B_ZL, qubit_mapping=[0, 1, 2])
+    ns.sim_run()
+    zl_data_results.append(node_B_ZL.output["M"][0])
+
+    node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+    ns.sim_run()
+    reverse_move_using_CXDirections(node_A_ZL, 0, 2)
+    node_A.qmemory.execute_instruction(instr.INSTR_H, qubit_mapping=[0])
+    ns.sim_run()
+    node_A.qmemory.execute_program(node_A_ZL, qubit_mapping=[0, 1, 2])
+    ns.sim_run()
+    zl_data_results.append(node_A_ZL.output["M"][0])
+
+    node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+    ns.sim_run()
+    reverse_move_using_CXDirections(node_B_ZL, 0, 2)
+    node_B.qmemory.execute_instruction(instr.INSTR_H, qubit_mapping=[0])
+    ns.sim_run()
+    node_B.qmemory.execute_program(node_B_ZL, qubit_mapping=[0, 1, 2])
+    ns.sim_run()
+    zl_data_results.append(node_B_ZL.output["M"][0])
 
     return zl_data_results
 
@@ -276,7 +311,7 @@ def logical_X_measurement(node_A: Node, node_B: Node):
 
     node_A.qmemory.execute_program(node_A_XL, qubit_mapping=[0, 1, 2])
     ns.sim_run()
-    node_B.qmemory.execute_program(node_A_XL, qubit_mapping=[0, 1, 2])
+    node_B.qmemory.execute_program(node_B_XL, qubit_mapping=[0, 1, 2])
     ns.sim_run()
 
     xl_data_results = [node_A_XL.output["M1"][0], node_B_XL.output["M1"][0], node_A_XL.output["M3"][0], node_B_XL.output["M3"][0]]
@@ -292,7 +327,7 @@ def plot_logical_post_theta(iters:int=1, steps:int=10):
         sum=0
         for iter in range(iters):
             rho, meas_results = logical_state_preparation(theta=theta, phi=0)
-            # theoretical_rho = create_theoretical_rho(theta=theta, phi=0)
+            # theoretical_rho, x_l, y_l, z_l = create_theoretical_rho(theta=theta, phi=0)
             print(iter)
             os.system('cls||clear')
             if meas_results[0]==0 and meas_results[1]==0:
@@ -319,15 +354,37 @@ def plot_logical_post_theta(iters:int=1, steps:int=10):
     return
 
 def logical_state_fidelity_theta(iters:int=1, steps:int=10):
+    z_L_avg = []
     for theta in np.arange(0,np.pi, np.pi/steps):
         sum=0
+        overlap = 0
         for iter in range(iters):
             rho, meas_results, data_measure = logical_state_preparation(theta=theta, phi=0)
+            theoretical_rho, x_l, y_l, z_l = create_theoretical_rho(theta=theta, phi=0)
             print(iter)
             os.system('cls||clear')
             if meas_results[0]==0 and meas_results[1]==0:
                 if meas_results[2]==meas_results[3]:
-                    sum = sum+1 
+                    sum = sum+1
+                    overlap += np.trace(z_l,rho)
+        overlap = overlap/sum
+        z_L_avg.append(overlap)
+
+    theta = np.arange(0,np.pi, np.pi/steps)
+    theory = np.cos(theta)
+
+    fig = plt.figure(figsize=(10,5))
+    fig.set_facecolor("w")
+    ax1 = fig.add_subplot()
+    ax1.set_title('Logical Z initialization')
+    ax1.set_ylabel('<Z_L>')
+    ax1.set_xlabel('θ in radians')
+    plt.grid()
+
+    plt.plot(theta,z_L_avg,'o', label='ZL assignment')
+    plt.plot(theta,theory,'r', label='ZL assignment')
+    plt.savefig('ZL assignment.pdf')
+
 
 """
 ############################################################################
@@ -343,6 +400,7 @@ def logical_state_fidelity_theta(iters:int=1, steps:int=10):
 iters = 1500
 steps = 20
 
+logical_state_fidelity_theta()
 
 
 
