@@ -171,7 +171,7 @@ def create_theoretical_rho(theta:float=0, phi:float=0):
     psi_logical = (logical_0 * (np.cos(theta/2))**2 + logical_1 * (np.exp(-1j*phi)*np.sin(theta/2))**2)/(np.sqrt((np.cos(theta/2))**4+(np.sin(theta/2))**4))
     rho_logical = np.outer(psi_logical, psi_logical)
 
-    z_L = np.outer(logical_0, logical_0) + np.outer(logical_1, logical_1)
+    z_L = np.outer(logical_0, logical_0) - np.outer(logical_1, logical_1)
     x_l = np.outer(logical_0, logical_1) + np.outer(logical_1, logical_0)
     y_L = -1j * np.outer(logical_0, logical_1) + 1j* np.outer(logical_1, logical_0)
     return rho_logical, x_l, y_L, z_L
@@ -400,8 +400,8 @@ def logical_state_fidelity_theta(iters:int=1, steps:int=10):
 """
 
 
-iters = 25
-steps = 10
+iters = 250
+steps = 30
 
 logical_state_fidelity_theta(iters=iters, steps=steps)
 
