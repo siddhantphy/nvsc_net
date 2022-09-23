@@ -452,13 +452,13 @@ def logical_state_fidelity_theta(iters:int=1, steps:int=10, logical_measure="Z_L
                 if meas_results[2]==meas_results[3]:
                     sum = sum+1
                     if logical_measure == "Z_L":
-                        new_overlap =  round(np.trace(np.matmul(z_l,rho)).real, 15)
+                        new_overlap =  round(np.trace(np.matmul(z_l,rho)).real, 12)
                         overlap +=new_overlap
                     elif logical_measure == "X_L":
-                        new_overlap =  round(np.trace(np.matmul(x_l,rho)).real, 15)
+                        new_overlap =  round(np.trace(np.matmul(x_l,rho)).real, 12)
                         overlap +=new_overlap
                     elif logical_measure == "Y_L":
-                        new_overlap =  round(np.trace(np.matmul(y_l,rho)).real, 15)
+                        new_overlap =  round(np.trace(np.matmul(y_l,rho)).real, 12)
                         overlap +=new_overlap
                     print(new_overlap)
         overlap = overlap/sum
@@ -484,7 +484,56 @@ def logical_state_fidelity_theta(iters:int=1, steps:int=10, logical_measure="Z_L
 
     plt.plot(theta,o_L_avg,'o', label=f'{logical_measure} assignment data')
     plt.plot(theta,theory,'r', label=f'{logical_measure} assignment theory')
-    plt.savefig(f'{logical_measure}_assignment_{timestr}.pdf')
+    plt.savefig(f'{logical_measure}_theta_assignment_{timestr}.pdf')
+
+
+def logical_state_fidelity_phi(iters:int=1, steps:int=10, logical_measure="Z_L"):
+    o_L_avg = []
+    for phi in np.arange(0,2 * np.pi, np.pi/steps):
+        sum=0
+        overlap = 0
+        for iter in range(iters):
+            rho, meas_results, data_measure = logical_state_preparation(theta=np.pi/2, phi=phi, logical_measure=logical_measure)
+            theoretical_rho, x_l, y_l, z_l = create_theoretical_rho(theta=np.pi/2, phi=phi)
+            print(iter)
+            os.system('cls||clear')
+            if meas_results[0]==0 and meas_results[1]==0:
+                if meas_results[2]==meas_results[3]:
+                    sum = sum+1
+                    if logical_measure == "Z_L":
+                        new_overlap =  round(np.trace(np.matmul(z_l,rho)).real, 12)
+                        overlap +=new_overlap
+                    elif logical_measure == "X_L":
+                        new_overlap =  round(np.trace(np.matmul(x_l,rho)).real, 12)
+                        overlap +=new_overlap
+                    elif logical_measure == "Y_L":
+                        new_overlap =  round(np.trace(np.matmul(y_l,rho)).real, 12)
+                        overlap +=new_overlap
+                    print(new_overlap)
+        overlap = overlap/sum
+        o_L_avg.append(overlap)
+
+    print(o_L_avg)
+    phi = np.arange(0, 2 * np.pi, np.pi/steps)
+
+    if logical_measure == "Z_L":
+        theory = 0 * phi
+    elif logical_measure == "X_L":
+        theory = np.cos(phi)
+    elif logical_measure == "Y_L":
+        theory = np.sin(phi)
+
+    fig = plt.figure(figsize=(10,5))
+    fig.set_facecolor("w")
+    ax1 = fig.add_subplot()
+    ax1.set_title(f'Logical {logical_measure} initialization')
+    ax1.set_ylabel(f'<{logical_measure}>')
+    ax1.set_xlabel('ϕ in radians')
+    plt.grid()
+
+    plt.plot(phi,o_L_avg,'o', label=f'{logical_measure} assignment data')
+    plt.plot(phi,theory,'r', label=f'{logical_measure} assignment theory')
+    plt.savefig(f'{logical_measure}_phi_assignment_{timestr}.pdf')
 
 
 """
@@ -501,8 +550,8 @@ def logical_state_fidelity_theta(iters:int=1, steps:int=10, logical_measure="Z_L
 iters = 25
 steps = 20
 
-logical_state_fidelity_theta(iters=iters, steps=steps, logical_measure="Y_L")
-
+logical_state_fidelity_theta(iters=iters, steps=steps, logical_measure="Z_L")
+# logical_state_fidelity_phi(iters=iters, steps=steps, logical_measure="Y_L")
 
 
 """ Trash data from before"""
