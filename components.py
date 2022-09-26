@@ -101,8 +101,18 @@ class ZL_Measurement(QuantumProgram):
 
     def program(self):
         e1, c1, c3 = self.get_qubit_indices(3)
+        self.apply(instr.INSTR_INIT, e1)
+        yield self.run()
+
+class ZL_E_measure(QuantumProgram):
+    default_num_qubits = 3
+
+    def program(self):
+        e1, c1, c3 = self.get_qubit_indices(3)
+        self.apply(instr.INSTR_H, e1)
         self.apply(instr.INSTR_MEASURE, e1, output_key="M")
         yield self.run()
+
 
 class XL_Measurement(QuantumProgram):
     default_num_qubits = 3
@@ -275,41 +285,29 @@ def logical_state_preparation(theta:float=0, phi:float=0, logical_measure = "Z_L
     return data_density_matrix, measurement_results, data_measure
 
 def physical_initialization(node_A: Node, node_B: Node, command:str = "0000"):
-    if command[0] == '0':
-        node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[1])
-        ns.sim_run()
-    elif command[0] == '1':
-        node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[1])
-        ns.sim_run()
+    if command[0] == '1':
         node_A.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[1], angle=np.pi)
         ns.sim_run()
     
-    if command[1] == '0':
-        node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[1])
-        ns.sim_run()
-    elif command[1] == '1':
-        node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[1])
-        ns.sim_run()
+    if command[1] == '1':
         node_B.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[1], angle=np.pi)
         ns.sim_run()
 
-    if command[2] == '0':
-        node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[2])
-        ns.sim_run()
-    elif command[2] == '1':
-        node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[2])
-        ns.sim_run()
+    if command[2] == '1':
         node_A.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[2], angle=np.pi)
         ns.sim_run()
 
-    if command[3] == '0':
-        node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[1])
-        ns.sim_run()
-    elif command[3] == '1':
-        node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[1])
-        ns.sim_run()
+    if command[3] == '1':
         node_B.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[2], angle=np.pi)
         ns.sim_run()
+
+    # carbon_1 = node_A.qmemory.peek([1])[0]
+    # carbon_3 = node_A.qmemory.peek([2])[0]
+    # carbon_2 = node_B.qmemory.peek([1])[0]
+    # carbon_4 = node_B.qmemory.peek([2])[0]
+
+    # print(reduced_dm([carbon_4]))
+    return
 
 def reset_nodes(node_A: Node, node_B: Node):
     node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
@@ -329,46 +327,36 @@ def reset_nodes(node_A: Node, node_B: Node):
     return
 
 def logical_Z_measurement(node_A: Node, node_B: Node):
-    node_A_ZL = ZL_Measurement(num_qubits=3)
-    node_B_ZL = ZL_Measurement(num_qubits=3)
+    zl_data_results = [None, None, None, None]
 
-    zl_data_results = []
 
-    node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
-    ns.sim_run()
-    reverse_move_using_CXDirections(node_A_ZL, 0, 1)
-    node_A.qmemory.execute_instruction(instr.INSTR_H, qubit_mapping=[0])
-    ns.sim_run()
-    node_A.qmemory.execute_program(node_A_ZL, qubit_mapping=[0, 1, 2])
-    ns.sim_run()
-    zl_data_results.append(node_A_ZL.output["M"][0])
+    zl = ZL_Measurement(num_qubits=3)
+    zl_em = ZL_E_measure(num_qubits=3)
 
-    node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
-    ns.sim_run()
-    reverse_move_using_CXDirections(node_B_ZL, 0, 1)
-    node_B.qmemory.execute_instruction(instr.INSTR_H, qubit_mapping=[0])
-    ns.sim_run()
-    node_B.qmemory.execute_program(node_B_ZL, qubit_mapping=[0, 1, 2])
-    ns.sim_run()
-    zl_data_results.append(node_B_ZL.output["M"][0])
+    reverse_move_using_CXDirections(zl, 0, 1)
+    zl = zl + zl_em
 
-    node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+    node_A.qmemory.execute_program(zl, qubit_mapping=[0, 1, 2])
     ns.sim_run()
-    reverse_move_using_CXDirections(node_A_ZL, 0, 2)
-    node_A.qmemory.execute_instruction(instr.INSTR_H, qubit_mapping=[0])
+    zl_data_results[0] = zl.output["M"][0]
+    node_B.qmemory.execute_program(zl, qubit_mapping=[0, 1, 2])
     ns.sim_run()
-    node_A.qmemory.execute_program(node_A_ZL, qubit_mapping=[0, 1, 2])
-    ns.sim_run()
-    zl_data_results.append(node_A_ZL.output["M"][0])
+    zl_data_results[1] = zl.output["M"][0]
 
-    node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+
+    zl = ZL_Measurement(num_qubits=3)
+    zl_em = ZL_E_measure(num_qubits=3)
+
+    reverse_move_using_CXDirections(zl, 0, 2)
+    zl = zl + zl_em
+
+    node_A.qmemory.execute_program(zl, qubit_mapping=[0, 1, 2])
     ns.sim_run()
-    reverse_move_using_CXDirections(node_B_ZL, 0, 2)
-    node_B.qmemory.execute_instruction(instr.INSTR_H, qubit_mapping=[0])
+    zl_data_results[2] = zl.output["M"][0]
+    node_B.qmemory.execute_program(zl, qubit_mapping=[0, 1, 2])
     ns.sim_run()
-    node_B.qmemory.execute_program(node_B_ZL, qubit_mapping=[0, 1, 2])
-    ns.sim_run()
-    zl_data_results.append(node_B_ZL.output["M"][0])
+    zl_data_results[3] = zl.output["M"][0]
+
 
     return zl_data_results
 
@@ -461,10 +449,12 @@ def logical_X_measurement(node_A: Node, node_B: Node):
 def create_input_output_matrix(iters: int = 10):
     """ Components creation"""
     io_matrix = np.zeros((16,16))
-    input_states = []
+    serial = range(16)
     input_states = [''.join(comb) for comb in product(['0','1'], repeat=4)]
-    meas_strings = [''.join(comb) for comb in product(['+','-'], repeat=4)]
+    # meas_strings = [''.join(comb) for comb in product(['+','-'], repeat=4)]
 
+    input_states = dict(zip(input_states, serial))
+    # meas_strings = dict(zip(meas_strings, serial))
 
     node_A = Node("Node: A")
     processor_A = NVQuantumProcessor(num_positions=3, noiseless=True)
@@ -488,12 +478,17 @@ def create_input_output_matrix(iters: int = 10):
 
     for input_state in input_states:
         for iteration in range(iters):
+            reset_nodes(node_A=node_A, node_B=node_B)
             physical_initialization(node_A=node_A, node_B=node_B, command = input_state)
             data_measure = logical_Z_measurement(node_A=node_A, node_B=node_B)
+            data_meas = ''.join([''.join(str(val)) for val in data_measure])
+            print(data_meas, input_state)
+            reset_nodes(node_A=node_A, node_B=node_B)
 
-            print(data_measure)
+            io_matrix[input_states[f"{data_meas}"]][input_states[f"{input_state}"]] += 1
 
-    return io_matrix
+
+    return io_matrix/iters
 
 """ 
     Plotting and results
@@ -646,7 +641,7 @@ steps = 20
 # logical_state_fidelity_theta(iters=iters, steps=steps, logical_measure="Z_L")
 # logical_state_fidelity_phi(iters=iters, steps=steps, logical_measure="Y_L")
 
-print(create_input_output_matrix(iters=10))
+create_input_output_matrix(iters=1)
 
 """ Trash data from before"""
 # [0.48333333333333334, 0.5333333333333333, 0.49666666666666665, 0.45666666666666667, 0.43333333333333335, 0.45666666666666667, 0.47333333333333333, 0.39, 0.37333333333333335, 0.31, 0.32666666666666666, 0.2966666666666667, 0.24333333333333335, 0.3, 0.22333333333333333, 0.25333333333333335, 0.28, 0.2633333333333333, 0.2833333333333333, 0.30666666666666664, 0.31, 0.37, 0.37666666666666665, 0.4066666666666667, 0.38666666666666666, 0.4, 0.45666666666666667, 0.4633333333333333, 0.47, 0.46]
