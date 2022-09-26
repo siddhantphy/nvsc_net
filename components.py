@@ -1,3 +1,4 @@
+from itertools import product
 import logging
 import os
 import time
@@ -154,6 +155,7 @@ def add_native_gates(NV_Center: NVQuantumProcessor):
                                                     topology=[NV_Center.electron_position],
                                                     q_noise_model=NV_Center.models["electron_single_qubit_noise"],
                                                     duration=NV_Center.properties["electron_single_qubit_duration"]))
+    
 
     physical_instructions.append(
             PhysicalInstruction(instr.INSTR_CX,
@@ -271,6 +273,60 @@ def logical_state_preparation(theta:float=0, phi:float=0, logical_measure = "Z_L
         raise RuntimeError("Invalid logical measurement basis chosen!")
 
     return data_density_matrix, measurement_results, data_measure
+
+def physical_initialization(node_A: Node, node_B: Node, command:str = "0000"):
+    if command[0] == '0':
+        node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[1])
+        ns.sim_run()
+    elif command[0] == '1':
+        node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[1])
+        ns.sim_run()
+        node_A.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[1], angle=np.pi)
+        ns.sim_run()
+    
+    if command[1] == '0':
+        node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[1])
+        ns.sim_run()
+    elif command[1] == '1':
+        node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[1])
+        ns.sim_run()
+        node_B.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[1], angle=np.pi)
+        ns.sim_run()
+
+    if command[2] == '0':
+        node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[2])
+        ns.sim_run()
+    elif command[2] == '1':
+        node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[2])
+        ns.sim_run()
+        node_A.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[2], angle=np.pi)
+        ns.sim_run()
+
+    if command[3] == '0':
+        node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[1])
+        ns.sim_run()
+    elif command[3] == '1':
+        node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[1])
+        ns.sim_run()
+        node_B.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[2], angle=np.pi)
+        ns.sim_run()
+
+def reset_nodes(node_A: Node, node_B: Node):
+    node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+    ns.sim_run()
+    node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[1])
+    ns.sim_run()
+    node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[2])
+    ns.sim_run()
+
+    node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+    ns.sim_run()
+    node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[1])
+    ns.sim_run()
+    node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[2])
+    ns.sim_run()
+
+    return
 
 def logical_Z_measurement(node_A: Node, node_B: Node):
     node_A_ZL = ZL_Measurement(num_qubits=3)
@@ -401,6 +457,43 @@ def logical_X_measurement(node_A: Node, node_B: Node):
 
     return xl_data_results
 
+
+def create_input_output_matrix(iters: int = 10):
+    """ Components creation"""
+    io_matrix = np.zeros((16,16))
+    input_states = []
+    input_states = [''.join(comb) for comb in product(['0','1'], repeat=4)]
+    meas_strings = [''.join(comb) for comb in product(['+','-'], repeat=4)]
+
+
+    node_A = Node("Node: A")
+    processor_A = NVQuantumProcessor(num_positions=3, noiseless=True)
+    node_A.add_subcomponent(processor_A, name="Node A processor")
+    node_A.add_ports(['Q_in_Ent'])
+    node_A.ports['Q_in_Ent'].forward_input(node_A.qmemory.ports['qin'])
+    e1, c1, c3 = ns.qubits.create_qubits(3)
+    processor_A.put([e1,c1,c3])
+
+
+    node_B = Node("Node: B")
+    processor_B = NVQuantumProcessor(num_positions=3, noiseless=True)
+    node_B.add_subcomponent(processor_B, name="Node B processor")
+    node_B.add_ports(['Q_in_Ent'])
+    node_B.ports['Q_in_Ent'].forward_input(node_B.qmemory.ports['qin'])
+    e2, c2, c4 = ns.qubits.create_qubits(3)
+    processor_B.put([e2,c2,c4])
+
+    add_native_gates(processor_A)
+    add_native_gates(processor_B)
+
+    for input_state in input_states:
+        for iteration in range(iters):
+            physical_initialization(node_A=node_A, node_B=node_B, command = input_state)
+            data_measure = logical_Z_measurement(node_A=node_A, node_B=node_B)
+
+            print(data_measure)
+
+    return io_matrix
 
 """ 
     Plotting and results
@@ -550,9 +643,13 @@ def logical_state_fidelity_phi(iters:int=1, steps:int=10, logical_measure="Z_L")
 iters = 25
 steps = 20
 
-logical_state_fidelity_theta(iters=iters, steps=steps, logical_measure="Z_L")
+# logical_state_fidelity_theta(iters=iters, steps=steps, logical_measure="Z_L")
 # logical_state_fidelity_phi(iters=iters, steps=steps, logical_measure="Y_L")
 
+print(create_input_output_matrix(iters=10))
 
 """ Trash data from before"""
 # [0.48333333333333334, 0.5333333333333333, 0.49666666666666665, 0.45666666666666667, 0.43333333333333335, 0.45666666666666667, 0.47333333333333333, 0.39, 0.37333333333333335, 0.31, 0.32666666666666666, 0.2966666666666667, 0.24333333333333335, 0.3, 0.22333333333333333, 0.25333333333333335, 0.28, 0.2633333333333333, 0.2833333333333333, 0.30666666666666664, 0.31, 0.37, 0.37666666666666665, 0.4066666666666667, 0.38666666666666666, 0.4, 0.45666666666666667, 0.4633333333333333, 0.47, 0.46]
+
+
+ 
