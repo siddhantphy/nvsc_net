@@ -96,13 +96,13 @@ class ZZ_Stabilizer(QuantumProgram):
         self.apply(instr.INSTR_MEASURE, e1, output_key="M")
         yield self.run()
 
-class ZL_Measurement(QuantumProgram):
-    default_num_qubits = 3
+# class ZL_Measurement(QuantumProgram):
+#     default_num_qubits = 3
 
-    def program(self):
-        e1, c1, c3 = self.get_qubit_indices(3)
-        self.apply(instr.INSTR_INIT, e1)
-        yield self.run()
+#     def program(self):
+#         e1, c1, c3 = self.get_qubit_indices(3)
+#         # self.apply(instr.INSTR_INIT, e1)
+#         yield self.run()
 
 class ZL_E_measure(QuantumProgram):
     default_num_qubits = 3
@@ -328,35 +328,42 @@ def reset_nodes(node_A: Node, node_B: Node):
 
 def logical_Z_measurement(node_A: Node, node_B: Node):
     zl_data_results = [None, None, None, None]
+    
 
+    zl_A = ZL_E_measure(num_qubits=3)
+    reverse_move_using_CXDirections(zl_A, 0, 1)
+    zl_B = ZL_E_measure(num_qubits=3)
+    reverse_move_using_CXDirections(zl_B, 0, 1)
 
-    zl = ZL_Measurement(num_qubits=3)
-    zl_em = ZL_E_measure(num_qubits=3)
-
-    reverse_move_using_CXDirections(zl, 0, 1)
-    zl = zl + zl_em
-
-    node_A.qmemory.execute_program(zl, qubit_mapping=[0, 1, 2])
+    node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
     ns.sim_run()
-    zl_data_results[0] = zl.output["M"][0]
-    node_B.qmemory.execute_program(zl, qubit_mapping=[0, 1, 2])
+    node_A.qmemory.execute_program(zl_A, qubit_mapping=[0, 1, 2])
     ns.sim_run()
-    zl_data_results[1] = zl.output["M"][0]
-
-
-    zl = ZL_Measurement(num_qubits=3)
-    zl_em = ZL_E_measure(num_qubits=3)
-
-    reverse_move_using_CXDirections(zl, 0, 2)
-    zl = zl + zl_em
-
-    node_A.qmemory.execute_program(zl, qubit_mapping=[0, 1, 2])
+    zl_data_results[0] = zl_A.output["M"][0]
+    node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
     ns.sim_run()
-    zl_data_results[2] = zl.output["M"][0]
-    node_B.qmemory.execute_program(zl, qubit_mapping=[0, 1, 2])
+    node_B.qmemory.execute_program(zl_B, qubit_mapping=[0, 1, 2])
     ns.sim_run()
-    zl_data_results[3] = zl.output["M"][0]
+    zl_data_results[1] = zl_B.output["M"][0]
 
+
+
+    zl_A = ZL_E_measure(num_qubits=3)
+    zl_B = ZL_E_measure(num_qubits=3)
+
+    reverse_move_using_CXDirections(zl_A, 0, 2)
+    reverse_move_using_CXDirections(zl_B, 0, 2)
+
+    node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+    ns.sim_run()
+    node_A.qmemory.execute_program(zl_A, qubit_mapping=[0, 1, 2])
+    ns.sim_run()
+    zl_data_results[2] = zl_A.output["M"][0]
+    node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+    ns.sim_run()
+    node_B.qmemory.execute_program(zl_B, qubit_mapping=[0, 1, 2])
+    ns.sim_run()
+    zl_data_results[3] = zl_B.output["M"][0]
 
     return zl_data_results
 
@@ -454,7 +461,6 @@ def create_input_output_matrix(iters: int = 10):
     # meas_strings = [''.join(comb) for comb in product(['+','-'], repeat=4)]
 
     input_states = dict(zip(input_states, serial))
-    # meas_strings = dict(zip(meas_strings, serial))
 
     node_A = Node("Node: A")
     processor_A = NVQuantumProcessor(num_positions=3, noiseless=True)
@@ -476,17 +482,15 @@ def create_input_output_matrix(iters: int = 10):
     add_native_gates(processor_A)
     add_native_gates(processor_B)
 
-    for input_state in input_states:
+    for input_state in input_states.keys():
         for iteration in range(iters):
             reset_nodes(node_A=node_A, node_B=node_B)
             physical_initialization(node_A=node_A, node_B=node_B, command = input_state)
             data_measure = logical_Z_measurement(node_A=node_A, node_B=node_B)
             data_meas = ''.join([''.join(str(val)) for val in data_measure])
-            print(data_meas, input_state)
             reset_nodes(node_A=node_A, node_B=node_B)
 
             io_matrix[input_states[f"{data_meas}"]][input_states[f"{input_state}"]] += 1
-
 
     return io_matrix/iters
 
@@ -641,7 +645,7 @@ steps = 20
 # logical_state_fidelity_theta(iters=iters, steps=steps, logical_measure="Z_L")
 # logical_state_fidelity_phi(iters=iters, steps=steps, logical_measure="Y_L")
 
-create_input_output_matrix(iters=1)
+print(create_input_output_matrix(iters=100))
 
 """ Trash data from before"""
 # [0.48333333333333334, 0.5333333333333333, 0.49666666666666665, 0.45666666666666667, 0.43333333333333335, 0.45666666666666667, 0.47333333333333333, 0.39, 0.37333333333333335, 0.31, 0.32666666666666666, 0.2966666666666667, 0.24333333333333335, 0.3, 0.22333333333333333, 0.25333333333333335, 0.28, 0.2633333333333333, 0.2833333333333333, 0.30666666666666664, 0.31, 0.37, 0.37666666666666665, 0.4066666666666667, 0.38666666666666666, 0.4, 0.45666666666666667, 0.4633333333333333, 0.47, 0.46]
