@@ -458,7 +458,6 @@ def create_input_output_matrix(iters: int = 10):
     io_matrix = np.zeros((16,16))
     serial = range(16)
     input_states = [''.join(comb) for comb in product(['0','1'], repeat=4)]
-    # meas_strings = [''.join(comb) for comb in product(['+','-'], repeat=4)]
 
     input_states = dict(zip(input_states, serial))
 
@@ -491,8 +490,32 @@ def create_input_output_matrix(iters: int = 10):
             reset_nodes(node_A=node_A, node_B=node_B)
 
             io_matrix[input_states[f"{data_meas}"]][input_states[f"{input_state}"]] += 1
+    
+    io_matrix = io_matrix/iters
 
-    return io_matrix/iters
+
+    fig = plt.figure(figsize=(10, 10))
+    fig.set_facecolor("w")
+    ax = fig.add_subplot()
+
+    plot = ax.matshow(io_matrix, cmap=plt.cm.Blues)
+    fig.colorbar(plot, ax=ax)
+
+    state_label = [f"|{str}⟩" for str in list(input_states.keys())]
+    meas_strings = [f'({str[0]}1,{str[1]}1,{str[2]}1,{str[3]}1,)' for str in [''.join(comb) for comb in product(['+','-'], repeat=4)]]
+
+    plt.xticks(range(16), state_label, rotation=60)
+    plt.yticks(range(16), meas_strings)
+
+    for i in range(16):
+        for j in range(16):
+            c = io_matrix[i,j]
+            ax.text(i, j, str(c), va='center', ha='center')
+
+    plt.savefig(f'io_matrix_{timestr}.pdf')
+
+    return io_matrix
+
 
 """ 
     Plotting and results
@@ -639,7 +662,7 @@ def logical_state_fidelity_phi(iters:int=1, steps:int=10, logical_measure="Z_L")
 """
 
 
-iters = 50
+iters = 200
 steps = 20
 
 # logical_state_fidelity_theta(iters=iters, steps=steps, logical_measure="Z_L")
@@ -649,3 +672,4 @@ print(create_input_output_matrix(iters=iters))
 
 """ Trash data from before"""
 # [0.48333333333333334, 0.5333333333333333, 0.49666666666666665, 0.45666666666666667, 0.43333333333333335, 0.45666666666666667, 0.47333333333333333, 0.39, 0.37333333333333335, 0.31, 0.32666666666666666, 0.2966666666666667, 0.24333333333333335, 0.3, 0.22333333333333333, 0.25333333333333335, 0.28, 0.2633333333333333, 0.2833333333333333, 0.30666666666666664, 0.31, 0.37, 0.37666666666666665, 0.4066666666666667, 0.38666666666666666, 0.4, 0.45666666666666667, 0.4633333333333333, 0.47, 0.46]
+
