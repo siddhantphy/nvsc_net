@@ -463,7 +463,7 @@ def create_input_output_matrix(iters: int = 10):
     input_states = dict(zip(input_states, serial))
 
     node_A = Node("Node: A")
-    processor_A = NVQuantumProcessor(num_positions=3, noiseless=True)
+    processor_A = NVQuantumProcessor(num_positions=3, noiseless=False)
     node_A.add_subcomponent(processor_A, name="Node A processor")
     node_A.add_ports(['Q_in_Ent'])
     node_A.ports['Q_in_Ent'].forward_input(node_A.qmemory.ports['qin'])
@@ -472,7 +472,7 @@ def create_input_output_matrix(iters: int = 10):
 
 
     node_B = Node("Node: B")
-    processor_B = NVQuantumProcessor(num_positions=3, noiseless=True)
+    processor_B = NVQuantumProcessor(num_positions=3, noiseless=False)
     node_B.add_subcomponent(processor_B, name="Node B processor")
     node_B.add_ports(['Q_in_Ent'])
     node_B.ports['Q_in_Ent'].forward_input(node_B.qmemory.ports['qin'])
@@ -639,16 +639,13 @@ def logical_state_fidelity_phi(iters:int=1, steps:int=10, logical_measure="Z_L")
 """
 
 
-iters = 25
+iters = 50
 steps = 20
 
 # logical_state_fidelity_theta(iters=iters, steps=steps, logical_measure="Z_L")
 # logical_state_fidelity_phi(iters=iters, steps=steps, logical_measure="Y_L")
 
-print(create_input_output_matrix(iters=100))
+print(create_input_output_matrix(iters=iters))
 
 """ Trash data from before"""
 # [0.48333333333333334, 0.5333333333333333, 0.49666666666666665, 0.45666666666666667, 0.43333333333333335, 0.45666666666666667, 0.47333333333333333, 0.39, 0.37333333333333335, 0.31, 0.32666666666666666, 0.2966666666666667, 0.24333333333333335, 0.3, 0.22333333333333333, 0.25333333333333335, 0.28, 0.2633333333333333, 0.2833333333333333, 0.30666666666666664, 0.31, 0.37, 0.37666666666666665, 0.4066666666666667, 0.38666666666666666, 0.4, 0.45666666666666667, 0.4633333333333333, 0.47, 0.46]
-
-
- 
