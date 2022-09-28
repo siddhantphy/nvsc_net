@@ -1,6 +1,7 @@
 from itertools import product
 import logging
 import os
+from platform import node
 import time
 import numpy as np
 import matplotlib.pyplot as plt
@@ -104,7 +105,7 @@ class ZZ_Stabilizer(QuantumProgram):
 #         # self.apply(instr.INSTR_INIT, e1)
 #         yield self.run()
 
-class ZL_E_measure(QuantumProgram):
+class ZL_measure(QuantumProgram):
     default_num_qubits = 3
 
     def program(self):
@@ -330,9 +331,9 @@ def logical_Z_measurement(node_A: Node, node_B: Node):
     zl_data_results = [None, None, None, None]
     
 
-    zl_A = ZL_E_measure(num_qubits=3)
+    zl_A = ZL_measure(num_qubits=3)
     reverse_move_using_CXDirections(zl_A, 0, 1)
-    zl_B = ZL_E_measure(num_qubits=3)
+    zl_B = ZL_measure(num_qubits=3)
     reverse_move_using_CXDirections(zl_B, 0, 1)
 
     node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
@@ -348,10 +349,9 @@ def logical_Z_measurement(node_A: Node, node_B: Node):
 
 
 
-    zl_A = ZL_E_measure(num_qubits=3)
-    zl_B = ZL_E_measure(num_qubits=3)
-
+    zl_A = ZL_measure(num_qubits=3)
     reverse_move_using_CXDirections(zl_A, 0, 2)
+    zl_B = ZL_measure(num_qubits=3)
     reverse_move_using_CXDirections(zl_B, 0, 2)
 
     node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
@@ -413,42 +413,42 @@ def logical_Y_measurement(node_A: Node, node_B: Node):
 
 
 def logical_X_measurement(node_A: Node, node_B: Node):
-    node_A_XL = XL_Measurement(num_qubits=3)
-    node_B_XL = XL_Measurement(num_qubits=3)
+    xl_data_results = [None, None, None, None]
+    
 
-    xl_data_results = []
-
-    node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
-    ns.sim_run()
-    reverse_move_using_CXDirections(node_A_XL, 0, 1)
-    ns.sim_run()
-    node_A.qmemory.execute_program(node_A_XL, qubit_mapping=[0, 1, 2])
-    ns.sim_run()
-    xl_data_results.append(node_A_XL.output["M"][0])
-
-    node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
-    ns.sim_run()
-    reverse_move_using_CXDirections(node_B_XL, 0, 1)
-    ns.sim_run()
-    node_B.qmemory.execute_program(node_B_XL, qubit_mapping=[0, 1, 2])
-    ns.sim_run()
-    xl_data_results.append(node_B_XL.output["M"][0])
+    xl_A = XL_Measurement(num_qubits=3)
+    reverse_move_using_CXDirections(xl_A, 0, 1)
+    xl_B = XL_Measurement(num_qubits=3)
+    reverse_move_using_CXDirections(xl_B, 0, 1)
 
     node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
     ns.sim_run()
-    reverse_move_using_CXDirections(node_A_XL, 0, 2)
+    node_A.qmemory.execute_program(xl_A, qubit_mapping=[0, 1, 2])
     ns.sim_run()
-    node_A.qmemory.execute_program(node_A_XL, qubit_mapping=[0, 1, 2])
-    ns.sim_run()
-    xl_data_results.append(node_A_XL.output["M"][0])
-
+    xl_data_results[0] = xl_A.output["M"][0]
     node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
     ns.sim_run()
-    reverse_move_using_CXDirections(node_B_XL, 0, 2)
+    node_B.qmemory.execute_program(xl_B, qubit_mapping=[0, 1, 2])
     ns.sim_run()
-    node_B.qmemory.execute_program(node_B_XL, qubit_mapping=[0, 1, 2])
+    xl_data_results[1] = xl_B.output["M"][0]
+
+
+
+    xl_A = XL_Measurement(num_qubits=3)
+    reverse_move_using_CXDirections(xl_A, 0, 2)
+    xl_B = XL_Measurement(num_qubits=3)
+    reverse_move_using_CXDirections(xl_B, 0, 2)
+
+    node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
     ns.sim_run()
-    xl_data_results.append(node_B_XL.output["M"][0])
+    node_A.qmemory.execute_program(xl_A, qubit_mapping=[0, 1, 2])
+    ns.sim_run()
+    xl_data_results[2] = xl_A.output["M"][0]
+    node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
+    ns.sim_run()
+    node_B.qmemory.execute_program(xl_B, qubit_mapping=[0, 1, 2])
+    ns.sim_run()
+    xl_data_results[3] = xl_B.output["M"][0]
 
     return xl_data_results
 
@@ -461,37 +461,44 @@ def create_input_output_matrix(iters: int = 10):
 
     input_states = dict(zip(input_states, serial))
 
-    node_A = Node("Node: A")
-    processor_A = NVQuantumProcessor(num_positions=3, noiseless=False)
-    node_A.add_subcomponent(processor_A, name="Node A processor")
-    node_A.add_ports(['Q_in_Ent'])
-    node_A.ports['Q_in_Ent'].forward_input(node_A.qmemory.ports['qin'])
-    e1, c1, c3 = ns.qubits.create_qubits(3)
-    processor_A.put([e1,c1,c3])
+    def create_system():
+        node_A = Node("Node: A")
+        processor_A = NVQuantumProcessor(num_positions=3, noiseless=True)
+        node_A.add_subcomponent(processor_A, name="Node A processor")
+        node_A.add_ports(['Q_in_Ent'])
+        node_A.ports['Q_in_Ent'].forward_input(node_A.qmemory.ports['qin'])
+        e1, c1, c3 = ns.qubits.create_qubits(3)
+        processor_A.put([e1,c1,c3])
 
 
-    node_B = Node("Node: B")
-    processor_B = NVQuantumProcessor(num_positions=3, noiseless=False)
-    node_B.add_subcomponent(processor_B, name="Node B processor")
-    node_B.add_ports(['Q_in_Ent'])
-    node_B.ports['Q_in_Ent'].forward_input(node_B.qmemory.ports['qin'])
-    e2, c2, c4 = ns.qubits.create_qubits(3)
-    processor_B.put([e2,c2,c4])
+        node_B = Node("Node: B")
+        processor_B = NVQuantumProcessor(num_positions=3, noiseless=True)
+        node_B.add_subcomponent(processor_B, name="Node B processor")
+        node_B.add_ports(['Q_in_Ent'])
+        node_B.ports['Q_in_Ent'].forward_input(node_B.qmemory.ports['qin'])
+        e2, c2, c4 = ns.qubits.create_qubits(3)
+        processor_B.put([e2,c2,c4])
 
-    add_native_gates(processor_A)
-    add_native_gates(processor_B)
+        add_native_gates(processor_A)
+        add_native_gates(processor_B)
+
+        return node_A, node_B
 
     for input_state in input_states.keys():
         for iteration in range(iters):
+            node_A, node_B = create_system()
             reset_nodes(node_A=node_A, node_B=node_B)
             physical_initialization(node_A=node_A, node_B=node_B, command = input_state)
             data_measure = logical_Z_measurement(node_A=node_A, node_B=node_B)
             data_meas = ''.join([''.join(str(val)) for val in data_measure])
             reset_nodes(node_A=node_A, node_B=node_B)
 
-            io_matrix[input_states[f"{data_meas}"]][input_states[f"{input_state}"]] += 1
+            # print(data_measure, input_state)
+            # print(ns.sim_time())
+
+            io_matrix[input_states[f"{data_meas}"], input_states[f"{input_state}"]] += 1
     
-    io_matrix = io_matrix/iters
+    io_matrix = np.around(io_matrix/iters, decimals=2)
 
 
     fig = plt.figure(figsize=(10, 10))
@@ -509,7 +516,7 @@ def create_input_output_matrix(iters: int = 10):
 
     for i in range(16):
         for j in range(16):
-            c = io_matrix[i,j]
+            c = io_matrix[j,i]
             ax.text(i, j, str(c), va='center', ha='center')
 
     plt.savefig(f'io_matrix_{timestr}.pdf')
@@ -525,7 +532,7 @@ def plot_logical_post_theta(iters:int=1, steps:int=10):
     for theta in np.arange(0,np.pi, np.pi/steps):
         sum=0
         for iter in range(iters):
-            rho, meas_results = logical_state_preparation(theta=theta, phi=0)
+            rho, meas_results, _ = logical_state_preparation(theta=theta, phi=0)
             # theoretical_rho, x_l, y_l, z_l = create_theoretical_rho(theta=theta, phi=0)
             print(iter)
             os.system('cls||clear')
@@ -548,7 +555,7 @@ def plot_logical_post_theta(iters:int=1, steps:int=10):
 
     plt.plot(theta,post_selection,'o', label='post_selection')
     plt.plot(theta,theory,'r', label='post_selection')
-    plt.savefig('Post selection.pdf')
+    plt.savefig(f'Post selection_{timestr}.pdf')
 
     return
 
@@ -662,14 +669,15 @@ def logical_state_fidelity_phi(iters:int=1, steps:int=10, logical_measure="Z_L")
 """
 
 
-iters = 200
-steps = 20
+iters = 50
+steps = 25
 
-# logical_state_fidelity_theta(iters=iters, steps=steps, logical_measure="Z_L")
-# logical_state_fidelity_phi(iters=iters, steps=steps, logical_measure="Y_L")
 
-print(create_input_output_matrix(iters=iters))
+# plot_logical_post_theta(iters=iters, steps=steps)
+# logical_state_fidelity_theta(iters=iters, steps=steps, logical_measure="X_L")
+# logical_state_fidelity_phi(iters=iters, steps=steps, logical_measure="Z_L")
+
+create_input_output_matrix(iters=iters)
 
 """ Trash data from before"""
 # [0.48333333333333334, 0.5333333333333333, 0.49666666666666665, 0.45666666666666667, 0.43333333333333335, 0.45666666666666667, 0.47333333333333333, 0.39, 0.37333333333333335, 0.31, 0.32666666666666666, 0.2966666666666667, 0.24333333333333335, 0.3, 0.22333333333333333, 0.25333333333333335, 0.28, 0.2633333333333333, 0.2833333333333333, 0.30666666666666664, 0.31, 0.37, 0.37666666666666665, 0.4066666666666667, 0.38666666666666666, 0.4, 0.45666666666666667, 0.4633333333333333, 0.47, 0.46]
-
