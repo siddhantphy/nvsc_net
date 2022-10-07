@@ -9,10 +9,14 @@ import netsquid.components.instructions as instr
 from q_programs import Rotate_Bell_Pair, Phase_Correction
 
 
-
-
 KET_0 = np.array([[1], [0]])
 KET_1 = np.array([[0], [1]])
+
+KET_PLUS = (KET_0 + KET_1)/np.sqrt(2)
+KET_MINUS = (KET_0 - KET_1)/np.sqrt(2)
+
+KET_i_PLUS = (KET_0 + 1j * KET_1)/np.sqrt(2)
+KET_i_MINUS = (KET_0 - 1j * KET_1)/np.sqrt(2)
 
 PAULI_X = np.array([[0, 1],
                     [1, 0]])
@@ -52,40 +56,8 @@ def create_theoretical_rho(theta:float=0, phi:float=0):
     return rho_logical, x_l, y_L, z_L
 
 
-def create_Bell_Pair(node_A: Node, node_B: Node):
-    entanglement_gen = NVDoubleClickMagicDistributor(nodes=[node_A, node_B], length_A=0.00001, length_B=0.00001,
-                                                 coin_prob_ph_ph=1., coin_prob_ph_dc=0., coin_prob_dc_dc=0.)
-    
-    event = entanglement_gen.add_delivery({node_A.ID: 0, node_B.ID: 0})
-    label = entanglement_gen.get_label(event)
-    ns.sim_run()
-    rotate = Rotate_Bell_Pair(num_qubits=3)
-    phase_gate = Phase_Correction(num_qubits=3)
-    program = rotate
-
-    # Apply phase correction based on the detector click, to make \Phi+>
-    if label[1] == BellIndex.PSI_MINUS:
-        program += phase_gate
-    node_A.qmemory.execute_program(program, qubit_mapping=[0, 1, 2], check_qubit_mapping=True)
-    ns.sim_run()
 
 
-def reset_nodes(node_A: Node, node_B: Node):
-    node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
-    ns.sim_run()
-    node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[1])
-    ns.sim_run()
-    node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[2])
-    ns.sim_run()
-
-    node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
-    ns.sim_run()
-    node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[1])
-    ns.sim_run()
-    node_B.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[2])
-    ns.sim_run()
-
-    return
 
 def physical_initialization_cardinal_states(node_A: Node, node_B: Node, command:str = "0000"):
     if command[0] == '1':
@@ -104,19 +76,43 @@ def physical_initialization_cardinal_states(node_A: Node, node_B: Node, command:
         node_B.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[2], angle=np.pi)
         ns.sim_run()
 
-    # carbon_1 = node_A.qmemory.peek([1])[0]
-    # carbon_3 = node_A.qmemory.peek([2])[0]
-    # carbon_2 = node_B.qmemory.peek([1])[0]
-    # carbon_4 = node_B.qmemory.peek([2])[0]
-
-    # print(reduced_dm([carbon_4]))
     return
 
 def state_tomography_physical():
     pass
 
-def physical_PTM():
-    pass
+def physical_PTM_ideal(op, num_qubits):
+    if op == "X":
+        pass
+    return
 
 def logical_PTM():
     pass
+
+"""
+    Node Operations    
+"""
+
+def reset_node(node: Node):
+    num_qubits = len(node.qmemory.mem_positions) - 1
+    for i in range(num_qubits):
+        node.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[i])
+        ns.sim_run()
+    return
+
+def create_Bell_Pair(node_A: Node, node_B: Node):
+    entanglement_gen = NVDoubleClickMagicDistributor(nodes=[node_A, node_B], length_A=0.00001, length_B=0.00001,
+                                                 coin_prob_ph_ph=1., coin_prob_ph_dc=0., coin_prob_dc_dc=0.)
+    
+    event = entanglement_gen.add_delivery({node_A.ID: 0, node_B.ID: 0})
+    label = entanglement_gen.get_label(event)
+    ns.sim_run()
+    rotate = Rotate_Bell_Pair(num_qubits=3)
+    phase_gate = Phase_Correction(num_qubits=3)
+    program = rotate
+
+    # Apply phase correction based on the detector click, to make \Phi+>
+    if label[1] == BellIndex.PSI_MINUS:
+        program += phase_gate
+    node_A.qmemory.execute_program(program, qubit_mapping=[0, 1, 2], check_qubit_mapping=True)
+    ns.sim_run()
