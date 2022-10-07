@@ -29,187 +29,21 @@ from netsquid.components.instructions import INSTR_X, INSTR_Y, INSTR_Z, INSTR_RO
 # Qiskit imports
 import qiskit
 
+# Local imports
+from basic_operations import *
+from q_programs import *
+from native_gates_and_parameters import *
+from network_model import *
+
+
+###############################################################
+###############################################################
+###############################################################
+
 timestr = time.strftime("%Y%m%d-%H%M%S")
 # ns.logger.setLevel(logging.DEBUG)
 
 
-"""
-    Classes and global functions for operations
-"""
-
-def create_Bell_Pair(node_A: Node, node_B: Node):
-    entanglement_gen = NVDoubleClickMagicDistributor(nodes=[node_A, node_B], length_A=0.00001, length_B=0.00001,
-                                                 coin_prob_ph_ph=1., coin_prob_ph_dc=0., coin_prob_dc_dc=0.)
-    
-    event = entanglement_gen.add_delivery({node_A.ID: 0, node_B.ID: 0})
-    label = entanglement_gen.get_label(event)
-    ns.sim_run()
-    rotate = Rotate_Bell_Pair(num_qubits=3)
-    phase_gate = Phase_Correction(num_qubits=3)
-    program = rotate
-
-    # Apply phase correction based on the detector click, to make \Phi+>
-    if label[1] == BellIndex.PSI_MINUS:
-        program += phase_gate
-    node_A.qmemory.execute_program(program, qubit_mapping=[0, 1, 2], check_qubit_mapping=True)
-    ns.sim_run()
-
-
-class Phase_Correction(QuantumProgram):
-    default_num_qubits = 3
-    def program(self):
-        e1, c1, c3 = self.get_qubit_indices(3)
-        self.apply(instr.INSTR_Z, e1)
-        yield self.run()
-
-class Rotate_Bell_Pair(QuantumProgram):
-    default_num_qubits = 3
-
-    def program(self):
-        e1, c1, c3 = self.get_qubit_indices(3)
-        self.apply(instr.INSTR_X, e1)
-        yield self.run()
-
-
-class Logical_Initialization(QuantumProgram):
-    default_num_qubits = 3
-
-    def program(self, theta: float=0, phi: float=0):
-
-        e1, c1, c3 = self.get_qubit_indices(3)
-        self.apply(instr.INSTR_ROT_Y, c1, angle=theta)
-        self.apply(instr.INSTR_ROT_Y, c3, angle=theta)
-        self.apply(instr.INSTR_ROT_Z, c3, angle=phi)
-        yield self.run()
-
-class XXXX_Stabilizer(QuantumProgram):
-    default_num_qubits = 3
-
-    def program(self):
-        e1, c1, c3 = self.get_qubit_indices(3)
-        self.apply(instr.INSTR_CX, [e1, c1])
-        self.apply(instr.INSTR_CX, [e1, c3])
-        self.apply(instr.INSTR_H, e1)
-        self.apply(instr.INSTR_MEASURE, e1, output_key="M")
-        yield self.run()
-
-class ZZ_Stabilizer(QuantumProgram):
-    default_num_qubits = 3
-
-    def program(self):
-        e1, c1, c3 = self.get_qubit_indices(3)
-        self.apply(instr.INSTR_H, e1)
-        self.apply(instr.INSTR_CZ, [e1, c1]) # Perform Controlled Phase
-        self.apply(instr.INSTR_CZ, [e1, c3])
-        self.apply(instr.INSTR_H, e1)
-        self.apply(instr.INSTR_MEASURE, e1, output_key="M")
-        yield self.run()
-
-# class ZL_Measurement(QuantumProgram):
-#     default_num_qubits = 3
-
-#     def program(self):
-#         e1, c1, c3 = self.get_qubit_indices(3)
-#         # self.apply(instr.INSTR_INIT, e1)
-#         yield self.run()
-
-class ZL_measure(QuantumProgram):
-    default_num_qubits = 3
-
-    def program(self):
-        e1, c1, c3 = self.get_qubit_indices(3)
-        self.apply(instr.INSTR_H, e1)
-        self.apply(instr.INSTR_MEASURE, e1, output_key="M")
-        yield self.run()
-
-
-class XL_Measurement(QuantumProgram):
-    default_num_qubits = 3
-
-    def program(self):
-        e1, c1, c3 = self.get_qubit_indices(3)
-        self.apply(instr.INSTR_MEASURE, e1, output_key="M")
-        yield self.run()
-
-class YL_Measurement(QuantumProgram):
-    default_num_qubits = 3
-
-    def program(self):
-        e1, c1, c3 = self.get_qubit_indices(3)
-        self.apply(instr.INSTR_MEASURE, e1, output_key="M")
-        yield self.run()
-
-
-
-"""
-    Adding native gates as instructions
-"""
-def add_native_gates(NV_Center: NVQuantumProcessor):
-    physical_instructions = []
-
-    # Add all arbitrary rotations on the carbon
-    physical_instructions.append(PhysicalInstruction(instr.INSTR_ROT_X, 
-                                                    parallel=False,
-                                                    topology=NV_Center.carbon_positions,
-                                                    q_noise_model=NV_Center.models["carbon_init_noise"],
-                                                    apply_q_noise_after=True,
-                                                    duration=NV_Center.properties["carbon_z_rot_duration"]))
-
-    physical_instructions.append(PhysicalInstruction(instr.INSTR_ROT_Y, 
-                                                    parallel=False,
-                                                    topology=NV_Center.carbon_positions,
-                                                    q_noise_model=NV_Center.models["carbon_init_noise"],
-                                                    apply_q_noise_after=True,
-                                                    duration=NV_Center.properties["carbon_z_rot_duration"]))
-    
-    physical_instructions.append(PhysicalInstruction(instr.INSTR_ROT_Z, 
-                                                    parallel=False,
-                                                    topology=NV_Center.carbon_positions,
-                                                    q_noise_model=NV_Center.models["carbon_init_noise"],
-                                                    apply_q_noise_after=True,
-                                                    duration=NV_Center.properties["carbon_z_rot_duration"]))
-    
-    physical_instructions.append(PhysicalInstruction(instr.INSTR_S, 
-                                                    parallel=False,
-                                                    topology=[NV_Center.electron_position],
-                                                    q_noise_model=NV_Center.models["electron_single_qubit_noise"],
-                                                    duration=NV_Center.properties["electron_single_qubit_duration"]))
-    
-
-    physical_instructions.append(
-            PhysicalInstruction(instr.INSTR_CX,
-                                parallel=False,
-                                topology=[(0, 1), (0, 2)],
-                                q_noise_model=NV_Center.models["ec_noise"],
-                                apply_q_noise_after=True,
-                                duration=NV_Center.properties["ec_two_qubit_gate_duration"]))
-    
-    physical_instructions.append(
-            PhysicalInstruction(instr.INSTR_CZ,
-                                parallel=False,
-                                topology=[(0, 1), (0, 2)],
-                                q_noise_model=NV_Center.models["ec_noise"],
-                                apply_q_noise_after=True,
-                                duration=NV_Center.properties["ec_two_qubit_gate_duration"]))
-    
-
-
-    for instruction in physical_instructions:
-            NV_Center.add_physical_instruction(instruction)
-    return
-
-def create_theoretical_rho(theta:float=0, phi:float=0):
-    ket_0 = np.array([[1], [0]])
-    ket_1 = np.array([[0], [1]])
-    logical_0 = (np.kron(np.kron(ket_0, ket_0) , np.kron(ket_0, ket_0)) + np.kron(np.kron(ket_1, ket_1) , np.kron(ket_1, ket_1)))/np.sqrt(2)
-    logical_1 = (np.kron(np.kron(ket_0, ket_1) , np.kron(ket_0, ket_1)) + np.kron(np.kron(ket_1, ket_0) , np.kron(ket_1, ket_0)))/np.sqrt(2)
-    psi_logical = (logical_0 * (np.cos(theta/2))**2 + logical_1 * (np.exp(-1j*phi)*np.sin(theta/2))**2)/(np.sqrt((np.cos(theta/2))**4+(np.sin(theta/2))**4))
-    rho_logical = np.outer(psi_logical, psi_logical)
-
-    z_L = np.outer(logical_0, logical_0) - np.outer(logical_1, logical_1)
-    x_l = np.outer(logical_0, logical_1) + np.outer(logical_1, logical_0)
-    y_L = -1j * np.outer(logical_0, logical_1) + 1j* np.outer(logical_1, logical_0)
-    return rho_logical, x_l, y_L, z_L
 
 
 """ Main logical circuit and experiment! """
@@ -294,30 +128,7 @@ def logical_state_preparation(theta:float=0, phi:float=0, logical_measure = "Z_L
 
     return data_density_matrix, measurement_results, data_measure
 
-def physical_initialization(node_A: Node, node_B: Node, command:str = "0000"):
-    if command[0] == '1':
-        node_A.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[1], angle=np.pi)
-        ns.sim_run()
-    
-    if command[1] == '1':
-        node_B.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[1], angle=np.pi)
-        ns.sim_run()
 
-    if command[2] == '1':
-        node_A.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[2], angle=np.pi)
-        ns.sim_run()
-
-    if command[3] == '1':
-        node_B.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[2], angle=np.pi)
-        ns.sim_run()
-
-    # carbon_1 = node_A.qmemory.peek([1])[0]
-    # carbon_3 = node_A.qmemory.peek([2])[0]
-    # carbon_2 = node_B.qmemory.peek([1])[0]
-    # carbon_4 = node_B.qmemory.peek([2])[0]
-
-    # print(reduced_dm([carbon_4]))
-    return
 
 def reset_nodes(node_A: Node, node_B: Node):
     node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
@@ -497,7 +308,7 @@ def create_input_output_matrix(iters: int = 10):
         for iteration in range(iters):
             node_A, node_B = create_system()
             reset_nodes(node_A=node_A, node_B=node_B)
-            physical_initialization(node_A=node_A, node_B=node_B, command = input_state)
+            physical_initialization_cardinal_states(node_A=node_A, node_B=node_B, command = input_state)
             data_measure = logical_Z_measurement(node_A=node_A, node_B=node_B)
             data_meas = ''.join([''.join(str(val)) for val in data_measure])
             reset_nodes(node_A=node_A, node_B=node_B)
