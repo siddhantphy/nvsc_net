@@ -1,10 +1,16 @@
+# Utilities imports
 from itertools import product
 import logging
 import os
-from platform import node
 import time
+
+# Mathematics imports
 import numpy as np
+
+# Plotting imports
 import matplotlib.pyplot as plt
+
+# Netsquid imports
 import netsquid as ns
 import netsquid.qubits.operators as ops
 from netsquid_nv.nv_center import NVQuantumProcessor
@@ -20,6 +26,8 @@ from netsquid.qubits.ketstates import BellIndex
 from netsquid.components.instructions import INSTR_X, INSTR_Y, INSTR_Z, INSTR_ROT_X, INSTR_ROT_Y, INSTR_ROT_Z, INSTR_H, INSTR_S,\
     INSTR_MEASURE, INSTR_SWAP, INSTR_INIT, INSTR_CXDIR, INSTR_EMIT
 
+# Qiskit imports
+import qiskit
 
 timestr = time.strftime("%Y%m%d-%H%M%S")
 # ns.logger.setLevel(logging.DEBUG)
@@ -269,6 +277,7 @@ def logical_state_preparation(theta:float=0, phi:float=0, logical_measure = "Z_L
     ns.sim_run()
     node_B.qmemory.execute_program(xxxx_B, qubit_mapping=[0, 1, 2])
     ns.sim_run()
+    
     measurement_results = [zz_A.output["M"][0], zz_B.output["M"][0], xxxx_A.output["M"][0], xxxx_B.output["M"][0]]
     data_density_matrix = reduced_dm([carbon_1, carbon_2, carbon_3, carbon_4])
 
