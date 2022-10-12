@@ -27,7 +27,7 @@ from netsquid.components.instructions import INSTR_X, INSTR_Y, INSTR_Z, INSTR_RO
     INSTR_MEASURE, INSTR_SWAP, INSTR_INIT, INSTR_CXDIR, INSTR_EMIT
 
 # Qiskit imports
-import qiskit
+# import qiskit
 
 # Local imports
 from basic_operations import *
@@ -49,28 +49,7 @@ timestr = time.strftime("%Y%m%d-%H%M%S")
 """ Main logical circuit and experiment! """
 
 def logical_state_preparation(theta:float=0, phi:float=0, logical_measure = "Z_L"):
-    """ Components creation"""
-    node_A = Node("Node: A")
-    processor_A = NVQuantumProcessor(num_positions=3, noiseless=True)
-    node_A.add_subcomponent(processor_A, name="Node A processor")
-    node_A.add_ports(['Q_in_Ent'])
-    node_A.ports['Q_in_Ent'].forward_input(node_A.qmemory.ports['qin'])
-    e1, c1, c3 = ns.qubits.create_qubits(3)
-    processor_A.put([e1,c1,c3])
-
-
-    node_B = Node("Node: B")
-    processor_B = NVQuantumProcessor(num_positions=3, noiseless=True)
-    node_B.add_subcomponent(processor_B, name="Node B processor")
-    node_B.add_ports(['Q_in_Ent'])
-    node_B.ports['Q_in_Ent'].forward_input(node_B.qmemory.ports['qin'])
-    e2, c2, c4 = ns.qubits.create_qubits(3)
-    processor_B.put([e2,c2,c4])
-
-
-    """ Logic of the tasks"""
-    add_native_gates(processor_A)
-    add_native_gates(processor_B)
+    node_A, node_B = create_two_node_setup()
 
     xxxx_A = XXXX_Stabilizer(num_qubits=3)
     xxxx_B = XXXX_Stabilizer(num_qubits=3)
@@ -81,7 +60,7 @@ def logical_state_preparation(theta:float=0, phi:float=0, logical_measure = "Z_L
 
     """ Run actual physical sequence """
 
-    physical_init = Logical_Initialization(num_qubits=3)
+    physical_init = Physical_Initialization(num_qubits=3)
     node_A.qmemory.execute_program(physical_init, qubit_mapping=[0, 1, 2], theta=theta, phi=phi)
     ns.sim_run()
 
@@ -130,7 +109,7 @@ def logical_state_preparation(theta:float=0, phi:float=0, logical_measure = "Z_L
 
 
 
-def reset_nodes(node_A: Node, node_B: Node):
+
     node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[0])
     ns.sim_run()
     node_A.qmemory.execute_instruction(instr.INSTR_INIT, qubit_mapping=[1])
@@ -281,37 +260,17 @@ def create_input_output_matrix(iters: int = 10):
 
     input_states = dict(zip(input_states, serial))
 
-    def create_system():
-        node_A = Node("Node: A")
-        processor_A = NVQuantumProcessor(num_positions=3, noiseless=True)
-        node_A.add_subcomponent(processor_A, name="Node A processor")
-        node_A.add_ports(['Q_in_Ent'])
-        node_A.ports['Q_in_Ent'].forward_input(node_A.qmemory.ports['qin'])
-        e1, c1, c3 = ns.qubits.create_qubits(3)
-        processor_A.put([e1,c1,c3])
-
-
-        node_B = Node("Node: B")
-        processor_B = NVQuantumProcessor(num_positions=3, noiseless=True)
-        node_B.add_subcomponent(processor_B, name="Node B processor")
-        node_B.add_ports(['Q_in_Ent'])
-        node_B.ports['Q_in_Ent'].forward_input(node_B.qmemory.ports['qin'])
-        e2, c2, c4 = ns.qubits.create_qubits(3)
-        processor_B.put([e2,c2,c4])
-
-        add_native_gates(processor_A)
-        add_native_gates(processor_B)
-
-        return node_A, node_B
 
     for input_state in input_states.keys():
         for iteration in range(iters):
-            node_A, node_B = create_system()
-            reset_nodes(node_A=node_A, node_B=node_B)
+            node_A, node_B = create_two_node_setup()
+            reset_node(node=node_A)
+            reset_node(node=node_B)
             physical_initialization_cardinal_states(node_A=node_A, node_B=node_B, command = input_state)
             data_measure = logical_Z_measurement(node_A=node_A, node_B=node_B)
             data_meas = ''.join([''.join(str(val)) for val in data_measure])
-            reset_nodes(node_A=node_A, node_B=node_B)
+            reset_node(node=node_A)
+            reset_node(node=node_B)
 
             # print(data_measure, input_state)
             # print(ns.sim_time())

@@ -22,7 +22,7 @@ class Rotate_Bell_Pair(QuantumProgram):
         yield self.run()
 
 
-class Logical_Initialization(QuantumProgram):
+class Physical_Initialization(QuantumProgram):
     default_num_qubits = 3
 
     def program(self, theta: float=0, phi: float=0):
