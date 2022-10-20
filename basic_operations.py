@@ -269,6 +269,7 @@ def create_physical_output_density_matrix(node: Node, operation: str = "NA", ite
     operation and then does state tomography to reconstruct the output state and expectation values vector. """
 
     p = [0, 0, 0]
+    
     if operation == "Rx_pi":
         for _ in range(iters):
             virtual_node = copy.deepcopy(node)
@@ -291,6 +292,7 @@ def create_physical_output_density_matrix(node: Node, operation: str = "NA", ite
             del virtual_node
             p[2] += res
         p[2] = p[2]/iters
+
     elif operation == "Rz_pi":
         for _ in range(iters):
             virtual_node = copy.deepcopy(node)
@@ -313,6 +315,7 @@ def create_physical_output_density_matrix(node: Node, operation: str = "NA", ite
             del virtual_node
             p[2] += res
         p[2] = p[2]/iters
+
     elif operation == "Rx_pi/2":
         for _ in range(iters):
             virtual_node = copy.deepcopy(node)
@@ -335,6 +338,7 @@ def create_physical_output_density_matrix(node: Node, operation: str = "NA", ite
             del virtual_node
             p[2] += res
         p[2] = p[2]/iters
+
     elif operation == "T":
         for _ in range(iters):
             virtual_node = copy.deepcopy(node)
@@ -401,7 +405,6 @@ def create_physical_PTM(node: Node, operation: str = "NA", iters: int = 10):
     ptm[3, 2] = 0.5 * (p_i_plus[2] - p_i_minus[2])
     ptm[1, 3] = 0.5 * (p_0[0] - p_1[0])
     ptm[2, 3] = 0.5 * (p_0[1] - p_1[1])
-
 
     return ptm
 
