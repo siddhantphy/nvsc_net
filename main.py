@@ -75,15 +75,17 @@ steps = 25
 # print(np.array([[1,0],[0,1j]])@np.array([[1,1],[1,-1]]))
 
 node = create_physical_qubit_single_node_setup(no_noise=True)
-sumx=0
+print(create_physical_input_density_matrix(node=node, input_state="+i", iters=200))
+# sumx=0
 
-for i in range(100):
-    physical_cardinal_state_init(node=node, state="0")
-    # print(reduced_dm([node.qmemory.peek([1])[0]]))
-    res = physical_pauli_measure(node=node, basis="Z")
-    sumx = sumx+res
-# print(reduced_dm([node.qmemory.peek([1])[0]]))
-print(sumx/100)
+# for i in range(100):
+#     physical_cardinal_state_init(node=node, state="0")
+#     # print(reduced_dm([node.qmemory.peek([1])[0]]))
+#     res = physical_pauli_measure(node=node, basis="Z")
+#     sumx = sumx+res
+# # print(reduced_dm([node.qmemory.peek([1])[0]]))
+# print(sumx/100)
+
 
 """ Trash data from before"""
 # [0.48333333333333334, 0.5333333333333333, 0.49666666666666665, 0.45666666666666667, 0.43333333333333335, 0.45666666666666667, 0.47333333333333333, 0.39, 0.37333333333333335, 0.31, 0.32666666666666666, 0.2966666666666667, 0.24333333333333335, 0.3, 0.22333333333333333, 0.25333333333333335, 0.28, 0.2633333333333333, 0.2833333333333333, 0.30666666666666664, 0.31, 0.37, 0.37666666666666665, 0.4066666666666667, 0.38666666666666666, 0.4, 0.45666666666666667, 0.4633333333333333, 0.47, 0.46]

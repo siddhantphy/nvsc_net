@@ -1,6 +1,9 @@
 # Math imports
 import numpy as np
+
+# utilities import
 from itertools import product
+import copy
 
 # Plotting imports
 import matplotlib.pyplot as plt
@@ -35,6 +38,8 @@ KET_MINUS = (KET_0 - KET_1)/np.sqrt(2)
 KET_i_PLUS = (KET_0 + 1j * KET_1)/np.sqrt(2)
 KET_i_MINUS = (KET_0 - 1j * KET_1)/np.sqrt(2)
 
+IDENTITY = np.array([[1, 0],
+                    [0, 1]])
 PAULI_X = np.array([[0, 1],
                     [1, 0]])
 PAULI_Y = np.array([[0, -1j],
@@ -208,6 +213,7 @@ def physical_pauli_measure(node: Node, basis: str = "Z"):
         node.qmemory.execute_program(y_m, qubit_mapping=[0, 1])
         ns.sim_run()
         measurement_result = int(y_m.output["M"][0])
+        # invert the measurment outputs to correct those!
         if measurement_result == 0:
             measurement_result = 1
         elif measurement_result == 1:
@@ -228,6 +234,46 @@ def physical_pauli_measure(node: Node, basis: str = "Z"):
         return 1
     if measurement_result == 1:
         return -1
+
+def create_physical_input_density_matrix(node: Node, input_state: str = "0", iters: int = 10):
+    """ Create the input density matrix by doing tomography, to mimic the actual experiment for state preparation! """
+
+    p = [0, 0, 0]
+    for _ in range(iters):
+        reset_node(node=node)
+        physical_cardinal_state_init(node=node, state=input_state)
+        res = physical_pauli_measure(node=node, basis="X")
+        p[0] += res
+    p[0] = p[0]/iters
+
+    for _ in range(iters):
+        reset_node(node=node)
+        physical_cardinal_state_init(node=node, state=input_state)
+        res = physical_pauli_measure(node=node, basis="Y")
+        p[1] += res
+    p[1] = p[1]/iters
+
+    for _ in range(iters):
+        reset_node(node=node)
+        physical_cardinal_state_init(node=node, state=input_state)
+        res = physical_pauli_measure(node=node, basis="Z")
+        p[2] += res
+    p[2] = p[2]/iters
+
+    rho = (IDENTITY + p[0]*PAULI_X + p[1]*PAULI_Y + p[2]*PAULI_Z)/2
+
+    return p, rho
+
+def create_physical_output_density_matrix(node: Node, operation: str = "I", iters: int = 10):
+    """ Create the output density matrix by doing tomography again, to mimic the actual experiment for an operation. First applies that
+    operation and then does state tomography to reconstruct the output state and expectation values vector. """
+
+    if 
+
+
+
+def get_input_outputexpectation_values(node: Node, operation: str = "I"):
+    pass
 
 
 def state_tomography_physical():
