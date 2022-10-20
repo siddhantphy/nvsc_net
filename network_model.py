@@ -34,10 +34,10 @@ def create_two_node_setup():
 
     return node_A, node_B
 
-def create_physical_qubit_single_node_setup():
+def create_physical_qubit_single_node_setup(no_noise: bool = True):
     # Component creation
     node = Node("Node: A")
-    processor = NVQuantumProcessor(num_positions=3, noiseless=True)
+    processor = NVQuantumProcessor(num_positions=3, noiseless=no_noise)
     node.add_subcomponent(processor, name="Node processor")
     node.add_ports(['Q_in_Ent'])
     node.ports['Q_in_Ent'].forward_input(node.qmemory.ports['qin'])

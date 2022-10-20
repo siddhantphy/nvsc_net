@@ -56,6 +56,7 @@ class ZZ_Stabilizer(QuantumProgram):
         self.apply(instr.INSTR_MEASURE, e1, output_key="M")
         yield self.run()
 
+""" Quantum programs for logical state measurement. """
 
 class ZL_measure(QuantumProgram):
     default_num_qubits = 3
@@ -81,4 +82,34 @@ class YL_Measurement(QuantumProgram):
     def program(self):
         e1, c1, c3 = self.get_qubit_indices(3)
         self.apply(instr.INSTR_MEASURE, e1, output_key="M")
+        yield self.run()
+
+""" Quantum programs for physical state measurement. """
+
+class X_Measurement(QuantumProgram):
+    default_num_qubits = 2
+
+    def program(self):
+        e, c = self.get_qubit_indices(2)
+        self.apply(instr.INSTR_MEASURE, e, output_key="M")
+        yield self.run()
+
+class Y_Measurement(QuantumProgram):
+    default_num_qubits = 2
+
+    def program(self):
+        e, c = self.get_qubit_indices(2)
+        self.apply(instr.INSTR_H, e)
+        self.apply(instr.INSTR_S, e)
+        self.apply(instr.INSTR_H, e)
+        self.apply(instr.INSTR_MEASURE, e, output_key="M")
+        yield self.run()
+
+class Z_Measurement(QuantumProgram):
+    default_num_qubits = 2
+
+    def program(self):
+        e, c = self.get_qubit_indices(2)
+        self.apply(instr.INSTR_H, e)
+        self.apply(instr.INSTR_MEASURE, e, output_key="M")
         yield self.run()
