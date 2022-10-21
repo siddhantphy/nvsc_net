@@ -1,5 +1,6 @@
 # Utilities imports
 from itertools import product
+import itertools
 import logging
 import os
 import time
@@ -172,3 +173,26 @@ def logical_state_fidelity_phi(iters:int=1, steps:int=10, logical_measure="Z_L")
     plt.plot(phi,o_L_avg,'o', label=f'{logical_measure} assignment data')
     plt.plot(phi,theory,'r', label=f'{logical_measure} assignment theory')
     plt.savefig(f'{logical_measure}_phi_assignment_{timestr}.pdf')
+
+
+""" To calculate the physical gate fidelity! """
+def get_the_physical_gate_fidelity(depolar_rates: list, operation: str = "NA", iterations: int = 10):
+    fid_gate = []
+    for depolar in depolar_rates:
+    # Parameters dictionary for properties
+        parameters = {"electron_T1": np.inf, "electron_T2": np.inf, "carbon_T1": np.inf, "carbon_T2": np.inf, "electron_init_depolar_prob": depolar,
+        "electron_single_qubit_depolar_prob": depolar, "carbon_init_depolar_prob": depolar, "carbon_z_rot_depolar_prob": depolar,
+        "ec_gate_depolar_prob": depolar}
+        fidelity = 0
+        for i in range(iterations):
+            node_noiseless = create_physical_qubit_single_node_setup(no_noise=True)
+            noiseless = np.array(create_analytical_physical_PTM(node=node_noiseless, operation="Rx_pi"))
+
+            node_noisy = create_physical_qubit_single_node_setup(no_noise=False, parameters=parameters)
+            noisy = np.array(create_analytical_physical_PTM(node=node_noisy, operation="Rx_pi"))
+
+            fidelity += (np.trace(noiseless.conj().T @ noisy)+2)/6
+        fidelity = fidelity/iterations
+        fid_gate.append(fidelity)
+
+    print(fid_gate)

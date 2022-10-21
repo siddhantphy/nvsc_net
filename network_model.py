@@ -10,7 +10,7 @@ from native_gates_and_parameters import add_native_gates
 """
     Network components creation
 """
-def create_two_node_setup():
+def create_two_node_setup(no_noise: bool = True, parameters: dict={}):
     # Component creation
     node_A = Node("Node: A")
     processor_A = NVQuantumProcessor(num_positions=3, noiseless=True)

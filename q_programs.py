@@ -3,7 +3,7 @@ from netsquid.components.qprogram import QuantumProgram
 
 
 """
-    Classes and quantum programs for node operations
+    Classes and quantum programs for node operations and initialization
 """
 
 class Phase_Correction(QuantumProgram):
@@ -32,6 +32,8 @@ class Physical_Initialization(QuantumProgram):
         self.apply(instr.INSTR_ROT_Y, c3, angle=theta)
         self.apply(instr.INSTR_ROT_Z, c3, angle=phi)
         yield self.run()
+
+""" Quantum programs for stabilizer measurements. """
 
 class XXXX_Stabilizer(QuantumProgram):
     default_num_qubits = 3
@@ -113,3 +115,6 @@ class Z_Measurement(QuantumProgram):
         self.apply(instr.INSTR_H, e)
         self.apply(instr.INSTR_MEASURE, e, output_key="M")
         yield self.run()
+
+""" Quantum Programs for logical operations. """
+

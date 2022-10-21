@@ -69,46 +69,9 @@ steps = 25
 # logical_state_fidelity_theta(iters=iters, steps=steps, logical_measure="X_L")
 # logical_state_fidelity_phi(iters=iters, steps=steps, logical_measure="Z_L")
 
-# create_input_output_matrix(iters=iters)
-# print(np.outer(KET_i_PLUS, KET_PLUS)+np.outer(KET_i_MINUS, KET_MINUS))
-# print(np.array([[1,1],[1,-1]])@np.array([[1,0],[0,1j]]))
-# print(np.array([[1,0],[0,1j]])@np.array([[1,1],[1,-1]]))
-
-depolar_rate = [0.01, 0.05, 0.1, 0.2, 0.3]
-fid_gate = []
-for depolar in depolar_rate:
-# Parameters dictionary for properties
-    parameters = {"electron_T1": np.inf, "electron_T2": np.inf, "carbon_T1": np.inf, "carbon_T2": np.inf, "electron_init_depolar_prob": depolar,
-    "electron_single_qubit_depolar_prob": depolar, "carbon_init_depolar_prob": depolar, "carbon_z_rot_depolar_prob": depolar,
-    "ec_gate_depolar_prob": depolar}
-    fidelity = 0
-    for i in range(iters):
-        node_noiseless = create_physical_qubit_single_node_setup(no_noise=True)
-        noiseless = np.array(create_analytical_physical_PTM(node=node_noiseless, operation="T"))
-
-        node_noisy = create_physical_qubit_single_node_setup(no_noise=False, parameters=parameters)
-        noisy = np.array(create_analytical_physical_PTM(node=node_noisy, operation="T"))
-
-        fidelity += (np.trace(noiseless.conj().T @ noisy)+2)/6
-    fidelity = fidelity/iters
-    fid_gate.append(fidelity)
-
-print(fid_gate)
+# get_the_physical_gate_fidelity([0.01, 0.02, 0.05, 0.07, 0.1, 0.12, 0.15], operation="T", iterations=iters)
 
 
-
-
-# print(create_physical_input_density_matrix(node=node, input_state="+i", iters=200))
-# sumx=0
-
-# for i in range(100):
-#     physical_cardinal_state_init(node=node, state="0")
-#     # print(reduced_dm([node.qmemory.peek([1])[0]]))
-#     res = physical_pauli_measure(node=node, basis="Z")
-#     sumx = sumx+res
-# # print(reduced_dm([node.qmemory.peek([1])[0]]))
-# print(sumx/100)
-
-
-""" Trash data from before"""
-# [0.48333333333333334, 0.5333333333333333, 0.49666666666666665, 0.45666666666666667, 0.43333333333333335, 0.45666666666666667, 0.47333333333333333, 0.39, 0.37333333333333335, 0.31, 0.32666666666666666, 0.2966666666666667, 0.24333333333333335, 0.3, 0.22333333333333333, 0.25333333333333335, 0.28, 0.2633333333333333, 0.2833333333333333, 0.30666666666666664, 0.31, 0.37, 0.37666666666666665, 0.4066666666666667, 0.38666666666666666, 0.4, 0.45666666666666667, 0.4633333333333333, 0.47, 0.46]
+node_A, node_B = create_two_node_setup()
+perform_first_stabilizer_measurements(node_A=node_A, node_B=node_B, state="0_L")
+print(get_instantaneous_data_qubit_density_matrix([node_A, node_B]))

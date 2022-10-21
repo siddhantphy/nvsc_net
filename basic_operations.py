@@ -1,4 +1,5 @@
 # Math imports
+from os import stat
 from platform import node
 import numpy as np
 
@@ -510,50 +511,92 @@ def create_physical_PTM(node: Node, operation: str = "NA", iters: int = 10):
 """
     Tomography and gate benchmarking functions for logical qubit
 """
+def logical_cardinal_state_init(node_A: Node, node_B: Node, state: str = "0_L"):
+    """ Prepares the logical qubit in the desired logical state for state tomography. All the 6 cardinal states are possible. """
 
+    reset_node(node=node_A)
+    reset_node(node=node_B)
 
-def get_input_outputexpectation_values(node: Node, operation: str = "I"):
-    pass
+    physical_init = Physical_Initialization(num_qubits=3)
 
+    if state == "0_L":
+        node_A.qmemory.execute_program(physical_init, qubit_mapping=[0, 1, 2], theta=0, phi=0)
+    elif state == "1_L":
+        node_A.qmemory.execute_program(physical_init, qubit_mapping=[0, 1, 2], theta=np.pi, phi=0)
+    elif state == "+_L":
+        node_A.qmemory.execute_program(physical_init, qubit_mapping=[0, 1, 2], theta=np.pi/2, phi=0)
+    elif state == "-_L":
+        node_A.qmemory.execute_program(physical_init, qubit_mapping=[0, 1, 2], theta=np.pi/2, phi=np.pi)
+    elif state == "+i_L":
+        node_A.qmemory.execute_program(physical_init, qubit_mapping=[0, 1, 2], theta=np.pi/2, phi=np.pi/2)
+    elif state == "-i_L":
+        node_A.qmemory.execute_program(physical_init, qubit_mapping=[0, 1, 2], theta=np.pi/2, phi=-np.pi/2)
+    else:
+        raise RuntimeError("Invalid initialization parameter!")
+    ns.sim_run()
 
-def state_tomography_physical():
-    pass
-
-def physical_PTM_ideal(op, num_qubits):
-    if op == "X":
-        pass
     return
 
-def logical_PTM():
+def 
+
+def measure_all_physical_qubits(node_A: Node, node_B: Node, pauli: str = "IIII"):
+    """ Calculate the expectation value of any given Pauli string over all the 4 physical carbon qubits in the code. """
+    
+
+
+def get_analytical_logical_expectation_values(node_A: Node, node_B: Node):
+    """ To measure all the possible permutations of the {I, X, Y, Z} over all physical qubits. """
+
+    error_configs = [''.join(comb) for comb in product(list(ERROR_CONFIGS.keys()), repeat=4)]
+    r_logical = np.zeros(len(error_configs))
+    rho_logical = get_instantaneous_data_qubit_density_matrix([node_A, node_B])
+
+    return
+
+
+""" Logical operations over two nodes! """
+
+def logical_Rx_pi(node_A: Node, node_B: Node):
+    """ Logical Rx(pi) is simply local rotations within the first node on D1 and D3. """
+
+    node_A.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[1], angle=np.pi)
+    ns.sim_run()
+    node_A.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[2], angle=np.pi)
+    ns.sim_run()
+
+    return
+
+def logical_Rz_pi(node_A: Node, node_B: Node):
+    """ Logical Rz(pi) is simply local rotations within each node on all the 4 carbon qubits. """
+
+    node_A.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[1], angle=np.pi)
+    ns.sim_run()
+    node_B.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[2], angle=np.pi)
+    ns.sim_run()
+    node_A.qmemory.execute_instruction(instr.INSTR_ROT_Y, qubit_mapping=[1], angle=np.pi)
+    ns.sim_run()
+    node_B.qmemory.execute_instruction(instr.INSTR_ROT_Y, qubit_mapping=[2], angle=np.pi)
+    ns.sim_run()
+
+    return
+
+def logical_T(node_A: Node, node_B: Node):
+    pass
+
+def logical_Rx_pi_2(node_A: Node, node_B: Node):
     pass
 
 
 """ Main logical circuit and experiments! """
 
-def logical_state_preparation(theta:float=0, phi:float=0, logical_measure = "Z_L"):
-    node_A, node_B = create_two_node_setup()
-
+def perform_all_stabilizers(node_A:Node, node_B: Node):
+    """ Performs all the stabilizers and returns the measurement results. <Z1Z3, Z2Z4, X1X1X3X4> is the order of execution and measurement results. """
     xxxx_A = XXXX_Stabilizer(num_qubits=3)
     xxxx_B = XXXX_Stabilizer(num_qubits=3)
 
     zz_A = ZZ_Stabilizer(num_qubits=3)
     zz_B = ZZ_Stabilizer(num_qubits=3)
-
-
-    """ Run actual physical sequence """
-
-    physical_init = Physical_Initialization(num_qubits=3)
-    node_A.qmemory.execute_program(physical_init, qubit_mapping=[0, 1, 2], theta=theta, phi=phi)
-    ns.sim_run()
-
-    electron_1 = node_A.qmemory.peek([0])[0]
-    electron_2 = node_B.qmemory.peek([0])[0]
-    carbon_1 = node_A.qmemory.peek([1])[0]
-    carbon_3 = node_A.qmemory.peek([2])[0]
-    carbon_2 = node_B.qmemory.peek([1])[0]
-    carbon_4 = node_B.qmemory.peek([2])[0]
-
-
+    
     node_A.qmemory.execute_program(zz_A, qubit_mapping=[0, 1, 2])
     ns.sim_run()
 
@@ -574,7 +617,37 @@ def logical_state_preparation(theta:float=0, phi:float=0, logical_measure = "Z_L
     ns.sim_run()
     
     measurement_results = [zz_A.output["M"][0], zz_B.output["M"][0], xxxx_A.output["M"][0], xxxx_B.output["M"][0]]
-    data_density_matrix = reduced_dm([carbon_1, carbon_2, carbon_3, carbon_4])
+
+    return measurement_results
+
+def perform_first_stabilizer_measurements(node_A:Node, node_B: Node, state: str="0_L"):
+    """ For the first ever stabilizer measurements, we condition to the right preparation of the logical state by checking the stabilizer
+    measurement results. We repeat if some stabilizers results in the opposite outcomes! """
+    
+    measurements = [0, 0, 0, 0]
+    while True:
+        reset_node(node=node_A)
+        reset_node(node=node_B)
+        logical_cardinal_state_init(node_A=node_A, node_B=node_B, state=state)
+        measurements = perform_all_stabilizers(node_A=node_A, node_B=node_B)
+        if (measurements[0]==0 and measurements[1]==0) and (measurements[2]==measurements[3]):
+            break
+    
+    return measurements
+
+def logical_state_preparation(theta:float=0, phi:float=0, logical_measure = "Z_L"):
+
+    node_A, node_B = create_two_node_setup()
+
+
+    """ Run actual physical sequence """
+
+    physical_init = Physical_Initialization(num_qubits=3)
+    node_A.qmemory.execute_program(physical_init, qubit_mapping=[0, 1, 2], theta=theta, phi=phi)
+    ns.sim_run()
+    
+    measurement_results = perform_all_stabilizers(node_A=node_A, node_B=node_B)
+    data_density_matrix = get_instantaneous_data_qubit_density_matrix([node_A, node_B])
 
     data_measure = "Nothing measured!"
 
