@@ -494,7 +494,7 @@ def create_physical_PTM(node: Node, operation: str = "NA", iters: int = 10):
     ptm[0, 1] = ptm[0, 2] = ptm[0, 3] = 0
     ptm[1, 1] = 0.5 * (p_plus[0] - p_minus[0])
     ptm[2, 2] = 0.5 * (p_i_plus[1] - p_i_minus[1])
-    ptm[3, 3] = 0.5 * (p_0[3] - p_1[3])
+    ptm[3, 3] = 0.5 * (p_0[2] - p_1[2])
     ptm[1, 0] = 0.5 * (p_0[0] + p_1[0])
     ptm[2, 0] = 0.5 * (p_0[1] + p_1[1])
     ptm[3, 0] = 0.5 * (p_0[2] + p_1[2])

@@ -74,8 +74,13 @@ steps = 25
 # print(np.array([[1,1],[1,-1]])@np.array([[1,0],[0,1j]]))
 # print(np.array([[1,0],[0,1j]])@np.array([[1,1],[1,-1]]))
 
-node = create_physical_qubit_single_node_setup(no_noise=True)
-print(create_analytical_physical_PTM(node=node, operation="Rx_pi"))
+node_noiseless = create_physical_qubit_single_node_setup(no_noise=True)
+noiseless = np.array(create_analytical_physical_PTM(node=node_noiseless, operation="T"))
+
+node_noisy = create_physical_qubit_single_node_setup(no_noise=False)
+noisy = np.array(create_analytical_physical_PTM(node=node_noisy, operation="T"))
+
+print((np.trace(noiseless.conj().T @ noisy)+2)/6)
 # print(create_physical_input_density_matrix(node=node, input_state="+i", iters=200))
 # sumx=0
 
