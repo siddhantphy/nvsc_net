@@ -13,7 +13,7 @@ from native_gates_and_parameters import add_native_gates
 def create_two_node_setup(no_noise: bool = True, parameters: dict={}):
     # Component creation
     node_A = Node("Node: A")
-    processor_A = NVQuantumProcessor(num_positions=3, noiseless=True)
+    processor_A = NVQuantumProcessor(num_positions=3, noiseless=no_noise, **parameters)
     node_A.add_subcomponent(processor_A, name="Node A processor")
     node_A.add_ports(['Q_in_Ent'])
     node_A.ports['Q_in_Ent'].forward_input(node_A.qmemory.ports['qin'])
@@ -22,7 +22,7 @@ def create_two_node_setup(no_noise: bool = True, parameters: dict={}):
 
 
     node_B = Node("Node: B")
-    processor_B = NVQuantumProcessor(num_positions=3, noiseless=True)
+    processor_B = NVQuantumProcessor(num_positions=3, noiseless=no_noise, **parameters)
     node_B.add_subcomponent(processor_B, name="Node B processor")
     node_B.add_ports(['Q_in_Ent'])
     node_B.ports['Q_in_Ent'].forward_input(node_B.qmemory.ports['qin'])

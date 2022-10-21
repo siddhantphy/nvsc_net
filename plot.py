@@ -196,3 +196,25 @@ def get_the_physical_gate_fidelity(depolar_rates: list, operation: str = "NA", i
         fid_gate.append(fidelity)
 
     print(fid_gate)
+
+
+def get_the_logical_gate_fidelity(depolar_rates: list, operation: str = "NA", iterations: int = 10):
+    fid_gate = []
+    for depolar in depolar_rates:
+    # Parameters dictionary for properties
+        parameters = {"electron_T1": np.inf, "electron_T2": np.inf, "carbon_T1": np.inf, "carbon_T2": np.inf, "electron_init_depolar_prob": depolar,
+        "electron_single_qubit_depolar_prob": depolar, "carbon_init_depolar_prob": depolar, "carbon_z_rot_depolar_prob": depolar,
+        "ec_gate_depolar_prob": depolar}
+        fidelity = 0
+        for i in range(iterations):
+            node_A, node_B = create_two_node_setup(no_noise=True)
+            lptm_noiseless = np.array(create_analytical_logical_PTM(node_A=node_A, node_B=node_B, operation="Rx_pi"))
+
+            node_A_noisy, node_B_noisy = create_two_node_setup(no_noise=False, parameters=parameters)
+            lptm_noisy = np.array(create_analytical_logical_PTM(node_A=node_A_noisy, node_B=node_B_noisy, operation="Rx_pi"))
+
+            fidelity += (np.trace(lptm_noiseless.conj().T @ lptm_noisy)+2)/6
+        fidelity = fidelity/iterations
+        fid_gate.append(fidelity)
+
+    print(fid_gate)

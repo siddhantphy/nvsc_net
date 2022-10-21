@@ -70,8 +70,8 @@ steps = 25
 # logical_state_fidelity_phi(iters=iters, steps=steps, logical_measure="Z_L")
 
 # get_the_physical_gate_fidelity([0.01, 0.02, 0.05, 0.07, 0.1, 0.12, 0.15], operation="T", iterations=iters)
+get_the_logical_gate_fidelity([0.01, 0.02, 0.05, 0.07, 0.1, 0.12, 0.15], operation="Rx_pi", iterations=iters)
 
-
-node_A, node_B = create_two_node_setup()
-perform_first_stabilizer_measurements(node_A=node_A, node_B=node_B, state="0_L")
-print(get_instantaneous_data_qubit_density_matrix([node_A, node_B]))
+# node_A, node_B = create_two_node_setup()
+# perform_first_stabilizer_measurements(node_A=node_A, node_B=node_B, state="0_L")
+# print(get_instantaneous_data_qubit_density_matrix([node_A, node_B]))

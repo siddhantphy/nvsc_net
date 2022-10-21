@@ -49,7 +49,7 @@ PAULI_Y = np.array([[0, -1j],
 PAULI_Z = np.array([[1, 0],
                     [0, -1]])
 
-ERROR_CONFIGS = {"I": IDENTITY, "X": PAULI_X, "Y": PAULI_Y, "Z": PAULI_Z}
+PAULI_CONFIGS = {"I": IDENTITY, "X": PAULI_X, "Y": PAULI_Y, "Z": PAULI_Z}
 
 # Theoretical and analytical functions for calculations
 
@@ -65,11 +65,12 @@ def create_cardinal_states_distance_2():
     ket_iplus_L = (ket_0L + 1j * ket_1L)/np.sqrt(2)
     ket_iminus_L = (ket_0L - 1j * ket_1L)/np.sqrt(2)
 
+    i_L = np.outer(ket_0L, ket_0L) + np.outer(ket_1L, ket_1L)
     z_L = np.outer(ket_0L, ket_0L) - np.outer(ket_1L, ket_1L)
     x_l = np.outer(ket_0L, ket_1L) + np.outer(ket_1L, ket_0L)
     y_L = -1j * np.outer(ket_0L, ket_1L) + 1j* np.outer(ket_1L, ket_0L)
 
-    return [ket_0L, ket_1L, ket_plus_L, ket_minus_L, ket_iplus_L, ket_iminus_L], [x_l, y_L, z_L]
+    return [ket_0L, ket_1L, ket_plus_L, ket_minus_L, ket_iplus_L, ket_iminus_L], [i_L, x_l, y_L, z_L]
 
 
 def create_theoretical_rho(theta:float=0, phi:float=0):
@@ -79,12 +80,11 @@ def create_theoretical_rho(theta:float=0, phi:float=0):
     logical_1 = (np.kron(np.kron(KET_0, KET_1) , np.kron(KET_0, KET_1)) + np.kron(np.kron(KET_1, KET_0) , np.kron(KET_1, KET_0)))/np.sqrt(2)
     psi_logical = (logical_0 * (np.cos(theta/2))**2 + logical_1 * (np.exp(-1j*phi)*np.sin(theta/2))**2)/(np.sqrt((np.cos(theta/2))**4+(np.sin(theta/2))**4))
     rho_logical = np.outer(psi_logical, psi_logical)
-
+    
     z_L = np.outer(logical_0, logical_0) - np.outer(logical_1, logical_1)
     x_l = np.outer(logical_0, logical_1) + np.outer(logical_1, logical_0)
     y_L = -1j * np.outer(logical_0, logical_1) + 1j* np.outer(logical_1, logical_0)
     return rho_logical, x_l, y_L, z_L
-
 
 
 """
@@ -536,22 +536,105 @@ def logical_cardinal_state_init(node_A: Node, node_B: Node, state: str = "0_L"):
     ns.sim_run()
 
     return
-
-def 
-
-def measure_all_physical_qubits(node_A: Node, node_B: Node, pauli: str = "IIII"):
-    """ Calculate the expectation value of any given Pauli string over all the 4 physical carbon qubits in the code. """
     
 
-
 def get_analytical_logical_expectation_values(node_A: Node, node_B: Node):
-    """ To measure all the possible permutations of the {I, X, Y, Z} over all physical qubits. """
+    """ To calculate all the expectation values {I_L, X_L, Y_L, Z_L} logical Pauli operatos. """
 
-    error_configs = [''.join(comb) for comb in product(list(ERROR_CONFIGS.keys()), repeat=4)]
-    r_logical = np.zeros(len(error_configs))
+    r_logical = [0, 0, 0]
+    _, logical_Pauli = create_cardinal_states_distance_2()
     rho_logical = get_instantaneous_data_qubit_density_matrix([node_A, node_B])
 
-    return
+    r_logical[0] = np.trace(logical_Pauli[1] @ rho_logical)/np.trace(logical_Pauli[0] @ rho_logical)
+    r_logical[1] = np.trace(logical_Pauli[2] @ rho_logical)/np.trace(logical_Pauli[0] @ rho_logical)
+    r_logical[2] = np.trace(logical_Pauli[3] @ rho_logical)/np.trace(logical_Pauli[0] @ rho_logical)
+
+    return r_logical
+
+def get_analytical_logical_output_expectation_values(node_A: Node, node_B: Node, operation: str = "NA", post_select: bool = True):
+    """ Create the output density matrix by doing tomography again, but using the density matrix. First applies that
+    operation and then does state tomography to reconstruct the output expectation values vector in the codespace. """
+
+    perform_first_stabilizer_measurements(node_A=node_A, node_B= node_B)
+    
+    trash = False
+
+    if operation == "Rx_pi":
+        logical_Rx_pi(node_A=node_A, node_B=node_B)
+    elif operation == "Rz_pi":
+        logical_Rx_pi(node_A=node_A, node_B=node_B)
+    elif operation == "Rx_pi/2":
+        logical_Rx_pi_2(node_A=node_A, node_B=node_B)
+    elif operation == "T":
+        logical_T(node_A=node_A, node_B=node_B)
+    else:
+        raise RuntimeError("Invalid operator chosen!")
+    
+    if post_select == True:
+        meas_res = perform_all_stabilizers(node_A=node_A, node_B=node_B)
+
+    if (meas_res[0]==0 and meas_res[1]==0) and (meas_res[2]==meas_res[3]):
+        pass
+    else:
+        trash = True
+    
+    r_out = get_analytical_logical_expectation_values(node_A=node_A, node_B=node_B)
+
+    return r_out, trash
+
+def create_analytical_logical_PTM(node_A: Node, node_B, operation: str = "NA"):
+    """ Construct the Logical Pauli Transfer matrix (LPTM 4 X 4 matrix) using state tomography techniques in the codespace! """
+    
+    logical_cardinal_state_init(node_A=node_A, node_B=node_B, state="0_L")
+    p_0 = get_analytical_logical_output_expectation_values(node_A=node_A, node_B=node_B, operation=operation)
+
+    logical_cardinal_state_init(node_A=node_A, node_B=node_B, state="1_L")
+    p_1 = get_analytical_logical_output_expectation_values(node_A=node_A, node_B=node_B, operation=operation)
+
+    logical_cardinal_state_init(node_A=node_A, node_B=node_B, state="+_L")
+    p_plus = get_analytical_logical_output_expectation_values(node_A=node_A, node_B=node_B, operation=operation)
+
+    logical_cardinal_state_init(node_A=node_A, node_B=node_B, state="-_L")
+    p_minus = get_analytical_logical_output_expectation_values(node_A=node_A, node_B=node_B, operation=operation)
+
+    logical_cardinal_state_init(node_A=node_A, node_B=node_B, state="+i_L")
+    p_i_plus = get_analytical_logical_output_expectation_values(node_A=node_A, node_B=node_B, operation=operation)
+
+    logical_cardinal_state_init(node_A=node_A, node_B=node_B, state="-i_L")
+    p_i_minus = get_analytical_logical_output_expectation_values(node_A=node_A, node_B=node_B, operation=operation)
+
+    lptm = np.identity(4)
+
+    lptm[0, 0] = 1
+    lptm[0, 1] = lptm[0, 2] = lptm[0, 3] = 0
+    lptm[1, 1] = 0.5 * (p_plus[0] - p_minus[0])
+    lptm[2, 2] = 0.5 * (p_i_plus[1] - p_i_minus[1])
+    lptm[3, 3] = 0.5 * (p_0[2] - p_1[2])
+    lptm[1, 0] = 0.5 * (p_0[0] + p_1[0])
+    lptm[2, 0] = 0.5 * (p_0[1] + p_1[1])
+    lptm[3, 0] = 0.5 * (p_0[2] + p_1[2])
+    lptm[2, 1] = 0.5 * (p_plus[1] - p_minus[1])
+    lptm[3, 1] = 0.5 * (p_plus[2] - p_minus[2])
+    lptm[1, 2] = 0.5 * (p_i_plus[0] - p_i_minus[0])
+    lptm[3, 2] = 0.5 * (p_i_plus[2] - p_i_minus[2])
+    lptm[1, 3] = 0.5 * (p_0[0] - p_1[0])
+    lptm[2, 3] = 0.5 * (p_0[1] - p_1[1])
+
+    return lptm
+
+# Logical PTM calculation via experimental methods
+def get_logical_expectation_values(node_A: Node, node_B: Node):
+    """ To measure all the possible permutations of the {I, X, Y, Z} over all physical qubits. """
+
+    pauli_configs = [''.join(comb) for comb in product(list(PAULI_CONFIGS.keys()), repeat=4)]
+    r_logical = np.zeros(len(pauli_configs))
+    rho_logical = get_instantaneous_data_qubit_density_matrix([node_A, node_B])
+
+    for serial, pauli in enumerate(pauli_configs):
+        operator = np.kron(np.kron(np.kron(PAULI_CONFIGS[f"{pauli[0]}"],PAULI_CONFIGS[f"{pauli[1]}"]), PAULI_CONFIGS[f"{pauli[2]}"]),PAULI_CONFIGS[f"{pauli[3]}"])
+        r_logical[serial] = np.trace(operator @ rho_logical)
+
+    return r_logical
 
 
 """ Logical operations over two nodes! """
