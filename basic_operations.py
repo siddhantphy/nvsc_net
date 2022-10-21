@@ -168,7 +168,7 @@ def get_instantaneous_data_qubit_density_matrix(nodes):
     return data_density_matrix
 
 """
-    Tomography and gate benchmarking functions
+    Tomography and gate benchmarking functions for physical qubit (no logical encoding)
 """
 
 def physical_cardinal_state_init(node: Node, state: str = "0"):
@@ -275,7 +275,7 @@ def create_analytical_physical_PTM(node: Node, operation: str = "NA"):
 
     return ptm
 
-
+# PTM calculation via experimental methods
 def physical_pauli_measure(node: Node, basis: str = "Z"):
     """ Measure the physical carbon qubit in the desired basis as commanded. These repeated state preparation and measurement are used to
     calculate the expectation values at the end. """
@@ -466,7 +466,6 @@ def create_physical_output_density_matrix(node: Node, operation: str = "NA", ite
 
     return p, rho
 
-
 def create_physical_PTM(node: Node, operation: str = "NA", iters: int = 10):
     """ Construct the Pauli Transfer matrix (PTM 4 X 4 matrix) using state tomography techniques! """
     
@@ -508,6 +507,9 @@ def create_physical_PTM(node: Node, operation: str = "NA", iters: int = 10):
     return ptm
 
 
+"""
+    Tomography and gate benchmarking functions for logical qubit
+"""
 
 
 def get_input_outputexpectation_values(node: Node, operation: str = "I"):

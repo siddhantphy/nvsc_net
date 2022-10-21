@@ -1,6 +1,13 @@
+# Math imports
+import numpy as np
+
+# Netsquid imports
 from netsquid_nv.nv_center import NVQuantumProcessor
 from netsquid.components.qprocessor import PhysicalInstruction
 import netsquid.components.instructions as instr
+
+
+
 
 
 """

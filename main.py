@@ -74,13 +74,30 @@ steps = 25
 # print(np.array([[1,1],[1,-1]])@np.array([[1,0],[0,1j]]))
 # print(np.array([[1,0],[0,1j]])@np.array([[1,1],[1,-1]]))
 
-node_noiseless = create_physical_qubit_single_node_setup(no_noise=True)
-noiseless = np.array(create_analytical_physical_PTM(node=node_noiseless, operation="T"))
+depolar_rate = [0.01, 0.05, 0.1, 0.2, 0.3]
+fid_gate = []
+for depolar in depolar_rate:
+# Parameters dictionary for properties
+    parameters = {"electron_T1": np.inf, "electron_T2": np.inf, "carbon_T1": np.inf, "carbon_T2": np.inf, "electron_init_depolar_prob": depolar,
+    "electron_single_qubit_depolar_prob": depolar, "carbon_init_depolar_prob": depolar, "carbon_z_rot_depolar_prob": depolar,
+    "ec_gate_depolar_prob": depolar}
+    fidelity = 0
+    for i in range(iters):
+        node_noiseless = create_physical_qubit_single_node_setup(no_noise=True)
+        noiseless = np.array(create_analytical_physical_PTM(node=node_noiseless, operation="T"))
 
-node_noisy = create_physical_qubit_single_node_setup(no_noise=False)
-noisy = np.array(create_analytical_physical_PTM(node=node_noisy, operation="T"))
+        node_noisy = create_physical_qubit_single_node_setup(no_noise=False, parameters=parameters)
+        noisy = np.array(create_analytical_physical_PTM(node=node_noisy, operation="T"))
 
-print((np.trace(noiseless.conj().T @ noisy)+2)/6)
+        fidelity += (np.trace(noiseless.conj().T @ noisy)+2)/6
+    fidelity = fidelity/iters
+    fid_gate.append(fidelity)
+
+print(fid_gate)
+
+
+
+
 # print(create_physical_input_density_matrix(node=node, input_state="+i", iters=200))
 # sumx=0
 
