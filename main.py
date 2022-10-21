@@ -75,7 +75,7 @@ steps = 25
 # print(np.array([[1,0],[0,1j]])@np.array([[1,1],[1,-1]]))
 
 node = create_physical_qubit_single_node_setup(no_noise=True)
-print(create_physical_PTM(node=node, operation="Rx_pi", iters=20))
+print(create_analytical_physical_PTM(node=node, operation="Rx_pi"))
 # print(create_physical_input_density_matrix(node=node, input_state="+i", iters=200))
 # sumx=0
 

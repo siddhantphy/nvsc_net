@@ -1,4 +1,5 @@
 # Math imports
+from platform import node
 import numpy as np
 
 # utilities import
@@ -46,6 +47,8 @@ PAULI_Y = np.array([[0, -1j],
                     [1j, 0]])
 PAULI_Z = np.array([[1, 0],
                     [0, -1]])
+
+ERROR_CONFIGS = {"I": IDENTITY, "X": PAULI_X, "Y": PAULI_Y, "Z": PAULI_Z}
 
 # Theoretical and analytical functions for calculations
 
@@ -143,6 +146,12 @@ def create_Bell_Pair(node_A: Node, node_B: Node):
     node_A.qmemory.execute_program(program, qubit_mapping=[0, 1, 2], check_qubit_mapping=True)
     ns.sim_run()
 
+def get_instantaneous_carbon_density_matrix(node: Node):
+    """ Get the density matrix of the single physical qubit. Node has one electron and one carbon in this case! """
+    carbon = node.qmemory.peek([1])[0]
+    return reduced_dm([carbon])
+
+
 def get_instantaneous_data_qubit_density_matrix(nodes):
     """
     Qubit placement is D1, D3 in node A and D2, D4 in node B. But the denisty matrix follows D1-D2-D3-D4 ordering for representation.
@@ -188,6 +197,83 @@ def physical_cardinal_state_init(node: Node, state: str = "0"):
         raise RuntimeError("Invalid initialization parameter!")
 
     return
+
+ # Analytical functions for calculation of Pauli TRansfer Matrix of Physical Qubit
+
+def get_analytical_physical_expectation_values(node: Node):
+    """ Get the expectation values from the density matrix obtained, rather than mimicking the experiment for many trials. """
+
+    r = [0, 0, 0]
+    rho = get_instantaneous_carbon_density_matrix(node=node)
+
+    r[0] = np.trace(PAULI_X @ rho)
+    r[1] = np.trace(PAULI_Y @ rho)
+    r[2] = np.trace(PAULI_Z @ rho)
+
+    return r
+
+def get_analytical_physical_output_expectation_values(node: Node, operation: str = "NA"):
+    """ Create the output density matrix by doing tomography again, but using the density matrix. First applies that
+    operation and then does state tomography to reconstruct the output expectation values vector. """
+
+    if operation == "Rx_pi":
+        node.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[1], angle=np.pi)
+        ns.sim_run()
+    elif operation == "Rz_pi":
+        node.qmemory.execute_instruction(instr.INSTR_ROT_Z, qubit_mapping=[1], angle=np.pi)
+        ns.sim_run()
+    elif operation == "Rx_pi/2":
+        node.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[1], angle=np.pi/2)
+        ns.sim_run()
+    elif operation == "T":
+        node.qmemory.execute_instruction(instr.INSTR_ROT_Z, qubit_mapping=[1], angle=np.pi/4)
+        ns.sim_run()
+    else:
+        raise RuntimeError("Invalid operator chosen!")
+    
+    r_out = get_analytical_physical_expectation_values(node=node)
+
+    return r_out
+
+def create_analytical_physical_PTM(node: Node, operation: str = "NA"):
+    """ Construct the Pauli Transfer matrix (PTM 4 X 4 matrix) using state tomography techniques! """
+    
+    physical_cardinal_state_init(node=node, state="0")
+    p_0 = get_analytical_physical_output_expectation_values(node=node, operation=operation)
+
+    physical_cardinal_state_init(node=node, state="1")
+    p_1 = get_analytical_physical_output_expectation_values(node=node, operation=operation)
+
+    physical_cardinal_state_init(node=node, state="+")
+    p_plus = get_analytical_physical_output_expectation_values(node=node, operation=operation)
+
+    physical_cardinal_state_init(node=node, state="-")
+    p_minus = get_analytical_physical_output_expectation_values(node=node, operation=operation)
+
+    physical_cardinal_state_init(node=node, state="+i")
+    p_i_plus = get_analytical_physical_output_expectation_values(node=node, operation=operation)
+
+    physical_cardinal_state_init(node=node, state="-i")
+    p_i_minus = get_analytical_physical_output_expectation_values(node=node, operation=operation)
+
+    ptm = np.identity(4)
+
+    ptm[0, 0] = 1
+    ptm[0, 1] = ptm[0, 2] = ptm[0, 3] = 0
+    ptm[1, 1] = 0.5 * (p_plus[0] - p_minus[0])
+    ptm[2, 2] = 0.5 * (p_i_plus[1] - p_i_minus[1])
+    ptm[3, 3] = 0.5 * (p_0[2] - p_1[2])
+    ptm[1, 0] = 0.5 * (p_0[0] + p_1[0])
+    ptm[2, 0] = 0.5 * (p_0[1] + p_1[1])
+    ptm[3, 0] = 0.5 * (p_0[2] + p_1[2])
+    ptm[2, 1] = 0.5 * (p_plus[1] - p_minus[1])
+    ptm[3, 1] = 0.5 * (p_plus[2] - p_minus[2])
+    ptm[1, 2] = 0.5 * (p_i_plus[0] - p_i_minus[0])
+    ptm[3, 2] = 0.5 * (p_i_plus[2] - p_i_minus[2])
+    ptm[1, 3] = 0.5 * (p_0[0] - p_1[0])
+    ptm[2, 3] = 0.5 * (p_0[1] - p_1[1])
+
+    return ptm
 
 
 def physical_pauli_measure(node: Node, basis: str = "Z"):
@@ -274,6 +360,7 @@ def create_physical_output_density_matrix(node: Node, operation: str = "NA", ite
         for _ in range(iters):
             virtual_node = copy.deepcopy(node)
             virtual_node.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[1], angle=np.pi)
+            ns.sim_run()
             res = physical_pauli_measure(node=node, basis="X")
             del virtual_node
             p[0] += res
@@ -281,6 +368,7 @@ def create_physical_output_density_matrix(node: Node, operation: str = "NA", ite
         for _ in range(iters):
             virtual_node = copy.deepcopy(node)
             virtual_node.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[1], angle=np.pi)
+            ns.sim_run()
             res = physical_pauli_measure(node=node, basis="Y")
             del virtual_node
             p[1] += res
@@ -288,6 +376,7 @@ def create_physical_output_density_matrix(node: Node, operation: str = "NA", ite
         for _ in range(iters):
             virtual_node = copy.deepcopy(node)
             virtual_node.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[1], angle=np.pi)
+            ns.sim_run()
             res = physical_pauli_measure(node=node, basis="Z")
             del virtual_node
             p[2] += res
@@ -297,6 +386,7 @@ def create_physical_output_density_matrix(node: Node, operation: str = "NA", ite
         for _ in range(iters):
             virtual_node = copy.deepcopy(node)
             virtual_node.qmemory.execute_instruction(instr.INSTR_ROT_Z, qubit_mapping=[1], angle=np.pi)
+            ns.sim_run()
             res = physical_pauli_measure(node=node, basis="X")
             del virtual_node
             p[0] += res
@@ -304,6 +394,7 @@ def create_physical_output_density_matrix(node: Node, operation: str = "NA", ite
         for _ in range(iters):
             virtual_node = copy.deepcopy(node)
             virtual_node.qmemory.execute_instruction(instr.INSTR_ROT_Z, qubit_mapping=[1], angle=np.pi)
+            ns.sim_run()
             res = physical_pauli_measure(node=node, basis="Y")
             del virtual_node
             p[1] += res
@@ -311,6 +402,7 @@ def create_physical_output_density_matrix(node: Node, operation: str = "NA", ite
         for _ in range(iters):
             virtual_node = copy.deepcopy(node)
             virtual_node.qmemory.execute_instruction(instr.INSTR_ROT_Z, qubit_mapping=[1], angle=np.pi)
+            ns.sim_run()
             res = physical_pauli_measure(node=node, basis="Z")
             del virtual_node
             p[2] += res
@@ -320,6 +412,7 @@ def create_physical_output_density_matrix(node: Node, operation: str = "NA", ite
         for _ in range(iters):
             virtual_node = copy.deepcopy(node)
             virtual_node.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[1], angle=np.pi/2)
+            ns.sim_run()
             res = physical_pauli_measure(node=node, basis="X")
             del virtual_node
             p[0] += res
@@ -327,6 +420,7 @@ def create_physical_output_density_matrix(node: Node, operation: str = "NA", ite
         for _ in range(iters):
             virtual_node = copy.deepcopy(node)
             virtual_node.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[1], angle=np.pi/2)
+            ns.sim_run()
             res = physical_pauli_measure(node=node, basis="Y")
             del virtual_node
             p[1] += res
@@ -334,6 +428,7 @@ def create_physical_output_density_matrix(node: Node, operation: str = "NA", ite
         for _ in range(iters):
             virtual_node = copy.deepcopy(node)
             virtual_node.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[1], angle=np.pi/2)
+            ns.sim_run()
             res = physical_pauli_measure(node=node, basis="Z")
             del virtual_node
             p[2] += res
@@ -343,6 +438,7 @@ def create_physical_output_density_matrix(node: Node, operation: str = "NA", ite
         for _ in range(iters):
             virtual_node = copy.deepcopy(node)
             virtual_node.qmemory.execute_instruction(instr.INSTR_ROT_Z, qubit_mapping=[1], angle=np.pi/4)
+            ns.sim_run()
             res = physical_pauli_measure(node=node, basis="X")
             del virtual_node
             p[0] += res
@@ -350,6 +446,7 @@ def create_physical_output_density_matrix(node: Node, operation: str = "NA", ite
         for _ in range(iters):
             virtual_node = copy.deepcopy(node)
             virtual_node.qmemory.execute_instruction(instr.INSTR_ROT_Z, qubit_mapping=[1], angle=np.pi/4)
+            ns.sim_run()
             res = physical_pauli_measure(node=node, basis="Y")
             del virtual_node
             p[1] += res
@@ -357,16 +454,18 @@ def create_physical_output_density_matrix(node: Node, operation: str = "NA", ite
         for _ in range(iters):
             virtual_node = copy.deepcopy(node)
             virtual_node.qmemory.execute_instruction(instr.INSTR_ROT_Z, qubit_mapping=[1], angle=np.pi/4)
+            ns.sim_run()
             res = physical_pauli_measure(node=node, basis="Z")
             del virtual_node
             p[2] += res
         p[2] = p[2]/iters
     else:
-        raise RuntimeError("Invalid measurement basis chosen!")
+        raise RuntimeError("Invalid operator chosen!")
 
     rho = (IDENTITY + p[0]*PAULI_X + p[1]*PAULI_Y + p[2]*PAULI_Z)/2
 
     return p, rho
+
 
 def create_physical_PTM(node: Node, operation: str = "NA", iters: int = 10):
     """ Construct the Pauli Transfer matrix (PTM 4 X 4 matrix) using state tomography techniques! """
@@ -407,6 +506,9 @@ def create_physical_PTM(node: Node, operation: str = "NA", iters: int = 10):
     ptm[2, 3] = 0.5 * (p_0[1] - p_1[1])
 
     return ptm
+
+
+
 
 def get_input_outputexpectation_values(node: Node, operation: str = "I"):
     pass
