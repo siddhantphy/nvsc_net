@@ -115,6 +115,3 @@ class Z_Measurement(QuantumProgram):
         self.apply(instr.INSTR_H, e)
         self.apply(instr.INSTR_MEASURE, e, output_key="M")
         yield self.run()
-
-""" Quantum Programs for logical operations. """
-

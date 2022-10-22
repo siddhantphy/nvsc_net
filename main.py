@@ -61,7 +61,7 @@ timestr = time.strftime("%Y%m%d-%H%M%S")
 """
 
 
-iters = 50
+iters = 100
 steps = 25
 
 
@@ -69,9 +69,22 @@ steps = 25
 # logical_state_fidelity_theta(iters=iters, steps=steps, logical_measure="X_L")
 # logical_state_fidelity_phi(iters=iters, steps=steps, logical_measure="Z_L")
 
-# get_the_physical_gate_fidelity([0.01, 0.02, 0.05, 0.07, 0.1, 0.12, 0.15], operation="T", iterations=iters)
-get_the_logical_gate_fidelity([0.01, 0.02, 0.05, 0.07, 0.1, 0.12, 0.15], operation="Rx_pi", iterations=iters)
+get_the_physical_gate_fidelity([0.005, 0.01, 0.015, 0.02, 0.1, 0.2, 0.4], operation="Rx_pi", iterations=iters)
+# get_the_logical_gate_fidelity([0.005, 0.01, 0.015, 0.02, 0.1, 0.2, 0.4], operation="Rx_pi", iterations=iters, post_select=False)
 
 # node_A, node_B = create_two_node_setup()
 # perform_first_stabilizer_measurements(node_A=node_A, node_B=node_B, state="0_L")
 # print(get_instantaneous_data_qubit_density_matrix([node_A, node_B]))
+
+
+""" Simulated Data! """
+
+# FOR RX_PI
+# Rates [0.005, 0.01, 0.015, 0.02, 0.1, 0.2, 0.4]
+# POST SELECTED FIDELITIES [0.956943433721451, 0.9382038293130955, 0.9211240368948278, 0.9354005636070851, 0.6338118580765639, 0.5200757575757575, 0.48983134920634924]
+# WITHOUT POST SELECTED [0.9233333333333332, 0.8583333333333333, 0.82, 0.7633333333333333, 0.5283333333333333, 0.5083333333333333, 0.49499999999999994]
+# PHYSICAL GATE FIDELITIES [0.9966666666666667, 0.9799999999999999, 0.9733333333333334, 0.9633333333333328, 0.8933333333333331, 0.733333333333333, 0.6383333333333332]
+
+
+# FOR RZ_PI
+

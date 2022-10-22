@@ -81,10 +81,7 @@ def create_theoretical_rho(theta:float=0, phi:float=0):
     psi_logical = (logical_0 * (np.cos(theta/2))**2 + logical_1 * (np.exp(-1j*phi)*np.sin(theta/2))**2)/(np.sqrt((np.cos(theta/2))**4+(np.sin(theta/2))**4))
     rho_logical = np.outer(psi_logical, psi_logical)
     
-    z_L = np.outer(logical_0, logical_0) - np.outer(logical_1, logical_1)
-    x_l = np.outer(logical_0, logical_1) + np.outer(logical_1, logical_0)
-    y_L = -1j * np.outer(logical_0, logical_1) + 1j* np.outer(logical_1, logical_0)
-    return rho_logical, x_l, y_L, z_L
+    return rho_logical
 
 
 """
@@ -545,63 +542,149 @@ def get_analytical_logical_expectation_values(node_A: Node, node_B: Node):
     _, logical_Pauli = create_cardinal_states_distance_2()
     rho_logical = get_instantaneous_data_qubit_density_matrix([node_A, node_B])
 
-    r_logical[0] = np.trace(logical_Pauli[1] @ rho_logical)/np.trace(logical_Pauli[0] @ rho_logical)
-    r_logical[1] = np.trace(logical_Pauli[2] @ rho_logical)/np.trace(logical_Pauli[0] @ rho_logical)
-    r_logical[2] = np.trace(logical_Pauli[3] @ rho_logical)/np.trace(logical_Pauli[0] @ rho_logical)
+    r_logical[0] = np.trace(logical_Pauli[1] @ rho_logical)
+    r_logical[1] = np.trace(logical_Pauli[2] @ rho_logical)
+    r_logical[2] = np.trace(logical_Pauli[3] @ rho_logical)
 
     return r_logical
 
-def get_analytical_logical_output_expectation_values(node_A: Node, node_B: Node, operation: str = "NA", post_select: bool = True):
-    """ Create the output density matrix by doing tomography again, but using the density matrix. First applies that
-    operation and then does state tomography to reconstruct the output expectation values vector in the codespace. """
+# /np.trace(logical_Pauli[0] @ rho_logical)
+# /np.trace(logical_Pauli[0] @ rho_logical)
+# /np.trace(logical_Pauli[0] @ rho_logical)
 
-    perform_first_stabilizer_measurements(node_A=node_A, node_B= node_B)
-    
-    trash = False
+# def get_analytical_logical_output_expectation_values(node_A: Node, node_B: Node, operation: str = "NA", post_select: bool = True):
+#     """ Create the output density matrix by doing tomography again, but using the density matrix. First applies that
+#     operation and then does state tomography to reconstruct the output expectation values vector in the codespace. """
 
-    if operation == "Rx_pi":
-        logical_Rx_pi(node_A=node_A, node_B=node_B)
-    elif operation == "Rz_pi":
-        logical_Rx_pi(node_A=node_A, node_B=node_B)
-    elif operation == "Rx_pi/2":
-        logical_Rx_pi_2(node_A=node_A, node_B=node_B)
-    elif operation == "T":
-        logical_T(node_A=node_A, node_B=node_B)
-    else:
-        raise RuntimeError("Invalid operator chosen!")
+#     trash = False
+
+#     if operation == "Rx_pi":
+#         logical_Rx_pi(node_A=node_A, node_B=node_B)
+#     elif operation == "Rz_pi":
+#         logical_Rx_pi(node_A=node_A, node_B=node_B)
+#     elif operation == "Rx_pi/2":
+#         logical_Rx_pi_2(node_A=node_A, node_B=node_B)
+#     elif operation == "T":
+#         logical_T(node_A=node_A, node_B=node_B)
+#     else:
+#         raise RuntimeError("Invalid operator chosen!")
     
-    if post_select == True:
+#     if post_select == True:
+#         meas_res = perform_all_stabilizers(node_A=node_A, node_B=node_B)
+
+#     if (meas_res[0]==0 and meas_res[1]==0) and (meas_res[2]==meas_res[3]):
+#         pass
+#     else:
+#         trash = True
+    
+#     r_out = get_analytical_logical_expectation_values(node_A=node_A, node_B=node_B)
+
+#     return r_out, trash
+
+def get_analytical_logical_PTM_entries(node_A: Node, node_B, input_state: str = "NA", operation: str = "NA", iterations: int = 10, post_select: bool = True):
+    """ Get the average entries for LPTM by doing muktiple ierations. Functionality for post-selection whe needed! """
+    p = [0, 0, 0]
+    trashed = 0
+    for trial in range(iterations):
+
+        perform_first_stabilizer_measurements(node_A=node_A, node_B=node_B, state=input_state)
+        apply_logical_operation(node_A=node_A, node_B=node_B, operation=operation)
         meas_res = perform_all_stabilizers(node_A=node_A, node_B=node_B)
+        if post_select == True:
+            if (meas_res[0]==0 and meas_res[1]==0) and (meas_res[2]==meas_res[3]):
+                r_logical = get_analytical_logical_expectation_values(node_A=node_A, node_B=node_B)
+                p[0] += r_logical[0]
+                p[1] += r_logical[1]
+                p[2] += r_logical[2]
+            else:
+                trashed += 1
+        else:
+            r_logical = get_analytical_logical_expectation_values(node_A=node_A, node_B=node_B)
+            p[0] += r_logical[0]
+            p[1] += r_logical[1]
+            p[2] += r_logical[2]
+    p[0] = p[0]/(iterations - trashed)
+    p[1] = p[1]/(iterations - trashed)
+    p[2] = p[2]/(iterations - trashed)
 
-    if (meas_res[0]==0 and meas_res[1]==0) and (meas_res[2]==meas_res[3]):
-        pass
-    else:
-        trash = True
-    
-    r_out = get_analytical_logical_expectation_values(node_A=node_A, node_B=node_B)
+    return p
 
-    return r_out, trash
-
-def create_analytical_logical_PTM(node_A: Node, node_B, operation: str = "NA"):
+def create_analytical_logical_PTM(node_A: Node, node_B, operation: str = "NA", iterations: int = 10, post_select: bool = True):
     """ Construct the Logical Pauli Transfer matrix (LPTM 4 X 4 matrix) using state tomography techniques in the codespace! """
-    
-    logical_cardinal_state_init(node_A=node_A, node_B=node_B, state="0_L")
-    p_0 = get_analytical_logical_output_expectation_values(node_A=node_A, node_B=node_B, operation=operation)
 
-    logical_cardinal_state_init(node_A=node_A, node_B=node_B, state="1_L")
-    p_1 = get_analytical_logical_output_expectation_values(node_A=node_A, node_B=node_B, operation=operation)
+    p_0 = get_analytical_logical_PTM_entries(node_A=node_A, node_B=node_B, input_state="0_L", operation=operation, iterations=iterations, post_select=post_select)
+    p_1 = get_analytical_logical_PTM_entries(node_A=node_A, node_B=node_B, input_state="1_L", operation=operation, iterations=iterations, post_select=post_select)
+    p_plus = get_analytical_logical_PTM_entries(node_A=node_A, node_B=node_B, input_state="+_L", operation=operation, iterations=iterations, post_select=post_select)
+    p_minus = get_analytical_logical_PTM_entries(node_A=node_A, node_B=node_B, input_state="-_L", operation=operation, iterations=iterations, post_select=post_select)
+    p_i_plus = get_analytical_logical_PTM_entries(node_A=node_A, node_B=node_B, input_state="+i_L", operation=operation, iterations=iterations, post_select=post_select)
+    p_i_minus = get_analytical_logical_PTM_entries(node_A=node_A, node_B=node_B, input_state="-i_L", operation=operation, iterations=iterations, post_select=post_select)
 
-    logical_cardinal_state_init(node_A=node_A, node_B=node_B, state="+_L")
-    p_plus = get_analytical_logical_output_expectation_values(node_A=node_A, node_B=node_B, operation=operation)
+    # perform_first_stabilizer_measurements(node_A=node_A, node_B=node_B, state="0_L")
+    # apply_logical_operation(node_A=node_A, node_B=node_B, operation=operation)
+    # meas_res = perform_all_stabilizers(node_A=node_A, node_B=node_B)
+    # if (meas_res[0]==0 and meas_res[1]==0) and (meas_res[2]==meas_res[3]):
+    #     pass
+    # else:
+    #     trash = True
+    # if post_select == True and trash == True:
+    #     return trash
+    # p_0 = get_analytical_logical_expectation_values(node_A=node_A, node_B=node_B)
 
-    logical_cardinal_state_init(node_A=node_A, node_B=node_B, state="-_L")
-    p_minus = get_analytical_logical_output_expectation_values(node_A=node_A, node_B=node_B, operation=operation)
+    # perform_first_stabilizer_measurements(node_A=node_A, node_B=node_B, state="1_L")
+    # apply_logical_operation(node_A=node_A, node_B=node_B, operation=operation)
+    # meas_res = perform_all_stabilizers(node_A=node_A, node_B=node_B)
+    # if (meas_res[0]==0 and meas_res[1]==0) and (meas_res[2]==meas_res[3]):
+    #     pass
+    # else:
+    #     trash = True
+    # if post_select == True and trash == True:
+    #     return trash
+    # p_1 = get_analytical_logical_expectation_values(node_A=node_A, node_B=node_B)
 
-    logical_cardinal_state_init(node_A=node_A, node_B=node_B, state="+i_L")
-    p_i_plus = get_analytical_logical_output_expectation_values(node_A=node_A, node_B=node_B, operation=operation)
+    # perform_first_stabilizer_measurements(node_A=node_A, node_B=node_B, state="+_L")
+    # apply_logical_operation(node_A=node_A, node_B=node_B, operation=operation)
+    # meas_res = perform_all_stabilizers(node_A=node_A, node_B=node_B)
+    # if (meas_res[0]==0 and meas_res[1]==0) and (meas_res[2]==meas_res[3]):
+    #     pass
+    # else:
+    #     trash = True
+    # if post_select == True and trash == True:
+    #     return trash
+    # p_plus = get_analytical_logical_expectation_values(node_A=node_A, node_B=node_B)
 
-    logical_cardinal_state_init(node_A=node_A, node_B=node_B, state="-i_L")
-    p_i_minus = get_analytical_logical_output_expectation_values(node_A=node_A, node_B=node_B, operation=operation)
+    # perform_first_stabilizer_measurements(node_A=node_A, node_B=node_B, state="-_L")
+    # apply_logical_operation(node_A=node_A, node_B=node_B, operation=operation)
+    # meas_res = perform_all_stabilizers(node_A=node_A, node_B=node_B)
+    # if (meas_res[0]==0 and meas_res[1]==0) and (meas_res[2]==meas_res[3]):
+    #     pass
+    # else:
+    #     trash = True
+    # if post_select == True and trash == True:
+    #     return trash
+    # p_minus = get_analytical_logical_expectation_values(node_A=node_A, node_B=node_B)
+
+    # perform_first_stabilizer_measurements(node_A=node_A, node_B=node_B, state="+i_L")
+    # apply_logical_operation(node_A=node_A, node_B=node_B, operation=operation)
+    # meas_res = perform_all_stabilizers(node_A=node_A, node_B=node_B)
+    # if (meas_res[0]==0 and meas_res[1]==0) and (meas_res[2]==meas_res[3]):
+    #     pass
+    # else:
+    #     trash = True
+    # if post_select == True and trash == True:
+    #     return trash
+    # p_i_plus = get_analytical_logical_expectation_values(node_A=node_A, node_B=node_B)
+
+    # perform_first_stabilizer_measurements(node_A=node_A, node_B=node_B, state="-i_L")
+    # apply_logical_operation(node_A=node_A, node_B=node_B, operation=operation)
+    # meas_res = perform_all_stabilizers(node_A=node_A, node_B=node_B)
+    # if (meas_res[0]==0 and meas_res[1]==0) and (meas_res[2]==meas_res[3]):
+    #     pass
+    # else:
+    #     trash = True
+    # if post_select == True and trash == True:
+    #     return trash
+    # p_i_minus = get_analytical_logical_expectation_values(node_A=node_A, node_B=node_B)
+
 
     lptm = np.identity(4)
 
@@ -668,6 +751,22 @@ def logical_T(node_A: Node, node_B: Node):
 
 def logical_Rx_pi_2(node_A: Node, node_B: Node):
     pass
+
+def apply_logical_operation(node_A: Node, node_B: Node, operation: str = "NA"):
+    """ Apply one of the available logical operations! """
+
+    if operation == "Rx_pi":
+        logical_Rx_pi(node_A=node_A, node_B=node_B)
+    elif operation == "Rz_pi":
+        logical_Rx_pi(node_A=node_A, node_B=node_B)
+    elif operation == "Rx_pi/2":
+        logical_Rx_pi_2(node_A=node_A, node_B=node_B)
+    elif operation == "T":
+        logical_T(node_A=node_A, node_B=node_B)
+    else:
+        raise RuntimeError("Invalid operator chosen!")
+
+    return
 
 
 """ Main logical circuit and experiments! """
