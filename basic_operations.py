@@ -723,7 +723,7 @@ def get_logical_expectation_values(node_A: Node, node_B: Node):
 """ Logical operations over two nodes! """
 
 def logical_Rx_pi(node_A: Node, node_B: Node):
-    """ Logical Rx(pi) is simply local rotations within the first node on D1 and D3. """
+    """ Logical Rx(pi) is simply local rotations within the first node on D1 and D3. Transversal in nature! """
 
     node_A.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[1], angle=np.pi)
     ns.sim_run()
@@ -733,7 +733,7 @@ def logical_Rx_pi(node_A: Node, node_B: Node):
     return
 
 def logical_Rz_pi(node_A: Node, node_B: Node):
-    """ Logical Rz(pi) is simply local rotations within each node on all the 4 carbon qubits. """
+    """ Logical Rz(pi) is simply local rotations within each node on all the 4 carbon qubits. Transversal in nature! """
 
     node_A.qmemory.execute_instruction(instr.INSTR_ROT_X, qubit_mapping=[1], angle=np.pi)
     ns.sim_run()
@@ -750,6 +750,7 @@ def logical_T(node_A: Node, node_B: Node):
     pass
 
 def logical_Rx_pi_2(node_A: Node, node_B: Node):
+    
     pass
 
 def apply_logical_operation(node_A: Node, node_B: Node, operation: str = "NA"):

@@ -218,3 +218,4 @@ def get_the_logical_gate_fidelity(depolar_rates: list, operation: str = "NA", it
         fid_gate.append(fidelity)
 
     print(fid_gate)
+
