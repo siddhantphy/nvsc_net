@@ -191,7 +191,7 @@ def get_the_physical_gate_fidelity(depolar_rates: list, operation: str = "NA", i
             node_noisy = create_physical_qubit_single_node_setup(no_noise=False, parameters=parameters)
             noisy = np.array(create_analytical_physical_PTM(node=node_noisy, operation=operation))
 
-            fidelity += (np.trace(noiseless.conj().T @ noisy)+2)/6
+            fidelity += (np.trace(noiseless.conj().T @ noisy) + 2) / 6
         fidelity = fidelity/iterations
         fid_gate.append(fidelity)
 
