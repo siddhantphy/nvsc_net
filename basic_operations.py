@@ -72,6 +72,8 @@ def create_cardinal_states_distance_2():
 
     return [ket_0L, ket_1L, ket_plus_L, ket_minus_L, ket_iplus_L, ket_iminus_L], [i_L, x_l, y_L, z_L]
 
+_, logical_states_dist_2 = create_cardinal_states_distance_2()
+
 
 def create_theoretical_rho(theta:float=0, phi:float=0):
     """ Create a logical pure target state to compare with, for state preparation. Parameterized by theta and phi angles. """
@@ -539,12 +541,12 @@ def get_analytical_logical_expectation_values(node_A: Node, node_B: Node):
     """ To calculate all the expectation values {I_L, X_L, Y_L, Z_L} logical Pauli operatos. """
 
     r_logical = [0, 0, 0]
-    _, logical_Pauli = create_cardinal_states_distance_2()
     rho_logical = get_instantaneous_data_qubit_density_matrix([node_A, node_B])
 
-    r_logical[0] = np.trace(logical_Pauli[1] @ rho_logical)
-    r_logical[1] = np.trace(logical_Pauli[2] @ rho_logical)
-    r_logical[2] = np.trace(logical_Pauli[3] @ rho_logical)
+    # print(np.real(np.trace(logical_states_dist_2[0] @ rho_logical)))
+    r_logical[0] = np.trace(logical_states_dist_2[1] @ rho_logical)
+    r_logical[1] = np.trace(logical_states_dist_2[2] @ rho_logical)
+    r_logical[2] = np.trace(logical_states_dist_2[3] @ rho_logical)
 
     return r_logical
 
@@ -750,7 +752,7 @@ def logical_T(node_A: Node, node_B: Node):
     pass
 
 def logical_Rx_pi_2(node_A: Node, node_B: Node):
-    
+
     pass
 
 def apply_logical_operation(node_A: Node, node_B: Node, operation: str = "NA"):

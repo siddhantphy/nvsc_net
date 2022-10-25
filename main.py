@@ -61,7 +61,7 @@ timestr = time.strftime("%Y%m%d-%H%M%S")
 """
 
 
-iters = 60
+iters = 100
 steps = 25
 
 
@@ -69,12 +69,9 @@ steps = 25
 # logical_state_fidelity_theta(iters=iters, steps=steps, logical_measure="X_L")
 # logical_state_fidelity_phi(iters=iters, steps=steps, logical_measure="Z_L")
 
-# get_the_physical_gate_fidelity([0.001, 0.002, 0.003, 0.004, 0.006, 0.007, 0.008, 0.009, 0.01, 0.012, 0.014, 0.016, 0.018, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05], operation="Rz_pi", iterations=iters)
-get_the_logical_gate_fidelity([0.001, 0.002, 0.003, 0.004, 0.006, 0.007, 0.008, 0.009, 0.01, 0.012, 0.014, 0.016, 0.018, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05], operation="Rz_pi", iterations=iters, post_select=False)
+get_the_physical_gate_fidelity([0.0001, 0.0002, 0.0003, 0.0004, 0.0005, 0.0006, 0.0007, 0.0008, 0.0009, 0.001, 0.002, 0.003], operation="Rx_pi", iterations=iters)
+# get_the_logical_gate_fidelity([0.0001, 0.0002, 0.0003, 0.0004, 0.0005, 0.0006, 0.0007, 0.0008, 0.0009, 0.001, 0.002, 0.003], operation="Rx_pi", iterations=iters, post_select=True)
 
-# node_A, node_B = create_two_node_setup()
-# perform_first_stabilizer_measurements(node_A=node_A, node_B=node_B, state="0_L")
-# print(get_instantaneous_data_qubit_density_matrix([node_A, node_B]))
 
 
 """ Simulated Data! """
@@ -93,6 +90,6 @@ get_the_logical_gate_fidelity([0.001, 0.002, 0.003, 0.004, 0.006, 0.007, 0.008, 
 
 
 # FOR RX_PI/2 [Only circuit noise!]
-# POST SELECTED FIDELITIES
+# POST SELECTED FIDELITIES [0.9999999999999999, 1.0, 0.9999999999999999, 1.0, 0.9970959595959595, 0.9971264367816092, 0.9926251161046773, 0.9986338797814206, 1.0, 0.995714007403078, 0.9983660130718953, 0.9936456063907043]
 # WITHOUT POST SELECTED
-# PHYSICAL GATE FIDELITIES
+# PHYSICAL GATE FIDELITIES 

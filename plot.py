@@ -180,16 +180,16 @@ def get_the_physical_gate_fidelity(depolar_rates: list, operation: str = "NA", i
     fid_gate = []
     for depolar in depolar_rates:
     # Parameters dictionary for properties
-        parameters = {"electron_T1": np.inf, "electron_T2": np.inf, "carbon_T1": np.inf, "carbon_T2": np.inf, "electron_init_depolar_prob": depolar,
-        "electron_single_qubit_depolar_prob": depolar, "carbon_init_depolar_prob": depolar, "carbon_z_rot_depolar_prob": depolar,
+        parameters = {"electron_T1": np.inf, "electron_T2": np.inf, "carbon_T1": np.inf, "carbon_T2": np.inf, "electron_init_depolar_prob": 0,
+        "electron_single_qubit_depolar_prob": 0, "carbon_init_depolar_prob": 0, "carbon_z_rot_depolar_prob": depolar,
         "ec_gate_depolar_prob": depolar}
         fidelity = 0
         for i in range(iterations):
             node_noiseless = create_physical_qubit_single_node_setup(no_noise=True)
-            noiseless = np.array(create_analytical_physical_PTM(node=node_noiseless, operation="Rx_pi"))
+            noiseless = np.array(create_analytical_physical_PTM(node=node_noiseless, operation=operation))
 
             node_noisy = create_physical_qubit_single_node_setup(no_noise=False, parameters=parameters)
-            noisy = np.array(create_analytical_physical_PTM(node=node_noisy, operation="Rx_pi"))
+            noisy = np.array(create_analytical_physical_PTM(node=node_noisy, operation=operation))
 
             fidelity += (np.trace(noiseless.conj().T @ noisy)+2)/6
         fidelity = fidelity/iterations
@@ -203,15 +203,15 @@ def get_the_logical_gate_fidelity(depolar_rates: list, operation: str = "NA", it
     trashed = 0
     for depolar in depolar_rates:
     # Parameters dictionary for properties
-        parameters = {"electron_T1": np.inf, "electron_T2": np.inf, "carbon_T1": np.inf, "carbon_T2": np.inf, "electron_init_depolar_prob": depolar,
-        "electron_single_qubit_depolar_prob": depolar, "carbon_init_depolar_prob": depolar, "carbon_z_rot_depolar_prob": depolar,
+        parameters = {"electron_T1": np.inf, "electron_T2": np.inf, "carbon_T1": np.inf, "carbon_T2": np.inf, "electron_init_depolar_prob": 0,
+        "electron_single_qubit_depolar_prob": 0, "carbon_init_depolar_prob": 0, "carbon_z_rot_depolar_prob": depolar,
         "ec_gate_depolar_prob": depolar}
         fidelity = 0
         node_A, node_B = create_two_node_setup(no_noise=True)
-        lptm_noiseless = np.array(create_analytical_logical_PTM(node_A=node_A, node_B=node_B, operation=operation,iterations=iterations, post_select=post_select))
+        lptm_noiseless = np.array(create_analytical_logical_PTM(node_A=node_A, node_B=node_B, operation=operation, iterations=iterations, post_select=post_select))
 
         node_A_noisy, node_B_noisy = create_two_node_setup(no_noise=False, parameters=parameters)
-        lptm_noisy = np.array(create_analytical_logical_PTM(node_A=node_A_noisy, node_B=node_B_noisy, operation=operation,iterations=iterations, post_select=post_select))
+        lptm_noisy = np.array(create_analytical_logical_PTM(node_A=node_A_noisy, node_B=node_B_noisy, operation=operation, iterations=iterations, post_select=post_select))
         
         fidelity = (np.trace(lptm_noiseless.conj().T @ lptm_noisy)+2)/6
 

@@ -20,21 +20,21 @@ def add_native_gates(NV_Center: NVQuantumProcessor):
     physical_instructions.append(PhysicalInstruction(instr.INSTR_ROT_X, 
                                                     parallel=False,
                                                     topology=NV_Center.carbon_positions,
-                                                    q_noise_model=NV_Center.models["carbon_init_noise"],
+                                                    q_noise_model=NV_Center.models["carbon_z_rot_noise"],
                                                     apply_q_noise_after=True,
                                                     duration=NV_Center.properties["carbon_z_rot_duration"]))
 
     physical_instructions.append(PhysicalInstruction(instr.INSTR_ROT_Y, 
                                                     parallel=False,
                                                     topology=NV_Center.carbon_positions,
-                                                    q_noise_model=NV_Center.models["carbon_init_noise"],
+                                                    q_noise_model=NV_Center.models["carbon_z_rot_noise"],
                                                     apply_q_noise_after=True,
                                                     duration=NV_Center.properties["carbon_z_rot_duration"]))
     
     physical_instructions.append(PhysicalInstruction(instr.INSTR_ROT_Z, 
                                                     parallel=False,
                                                     topology=NV_Center.carbon_positions,
-                                                    q_noise_model=NV_Center.models["carbon_init_noise"],
+                                                    q_noise_model=NV_Center.models["carbon_z_rot_noise"],
                                                     apply_q_noise_after=True,
                                                     duration=NV_Center.properties["carbon_z_rot_duration"]))
     
