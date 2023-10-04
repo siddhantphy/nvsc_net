@@ -69,8 +69,8 @@ steps = 25
 # logical_state_fidelity_theta(iters=iters, steps=steps, logical_measure="X_L")
 # logical_state_fidelity_phi(iters=iters, steps=steps, logical_measure="Z_L")
 
-get_the_physical_gate_fidelity([0.0001, 0.0002, 0.0003, 0.0004, 0.0005, 0.0006, 0.0007, 0.0008, 0.0009, 0.001, 0.002, 0.003], operation="Rx_pi", iterations=iters)
-# get_the_logical_gate_fidelity([0.0001, 0.0002, 0.0003, 0.0004, 0.0005, 0.0006, 0.0007, 0.0008, 0.0009, 0.001, 0.002, 0.003], operation="Rx_pi", iterations=iters, post_select=True)
+# get_the_physical_gate_fidelity([0.0001, 0.0002, 0.0003, 0.0004, 0.0005, 0.0006, 0.0007, 0.0008, 0.0009, 0.001, 0.002, 0.003], operation="Rx_pi", iterations=iters)
+get_the_logical_gate_fidelity([0.0001, 0.0002, 0.0003, 0.0004, 0.0005, 0.0006, 0.0007, 0.0008, 0.0009, 0.001, 0.002, 0.003], operation="Rx_pi", iterations=iters, post_select=True)
 
 
 
